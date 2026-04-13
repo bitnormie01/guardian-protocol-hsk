@@ -6,6 +6,51 @@
 
 ---
 
+## Project Name
+Guardian Protocol — Fail-closed security middleware for autonomous agents executing swaps on X Layer.
+
+## Track
+Skill Arena
+
+## Contact
+Telegram: @bitnormie01
+
+## Summary
+Guardian Protocol is a deterministic, agent-native security oracle that intercepts every proposed swap before execution on X Layer. It runs 4 parallel security analyzers — OKX token scan, OKX transaction pre-execution, MEV slippage analysis, and on-chain AMM pool inspection — computing a weighted Safety Score (0–100) and returning a binary `isSafeToExecute` verdict. If *any* analyzer fails or returns suspicious data, the trade is blocked. No ambiguity. No "maybe." This is the fail-closed model.
+
+## What I Built
+Most DeFi security tools are reactive — they flag known scam tokens after the fact. Guardian is proactive, deterministic, and adversarial-aware. It solves the problem of autonomous AI agents executing trades without human oversight by acting as a machine-readable security gate. One import, one function call, one verdict. Agents that use Guardian will never accidentally trade a honeypot or fall victim to a rug-pull because they "couldn't check."
+
+## How It Functions
+The orchestrator fires 4 analyzers in parallel:
+1. **Token Risk Analyzer** — calls OKX Security API token scan on both input/output tokens; flags honeypots, predatory taxes, blacklist functions, and unverified contracts.
+2. **TX Simulation Analyzer** — simulates via eth_call on X Layer RPC, cross-validates against OKX's independent pre-execution scan, then runs 8-variant invariant fuzzing to detect state-dependent revert traps.
+3. **MEV Detection Analyzer** — tracks builder toxicity scores and private MEV flow estimates; dynamically tightens slippage tolerance based on pool liquidity depth.
+4. **AMM Pool Analyzer** — reads concentrated liquidity state on-chain (sqrtPriceX96, tick spacing, active liquidity); flags thin liquidity manipulation, tick gap attacks, one-sided liquidity, and TWAP oracle deviation via Uniswap AI Skills patterns.
+
+Results are aggregated with weighted scoring (30% token / 30% simulation / 15% MEV / 25% AMM), penalty cascading for correlated risks, and confidence degradation for missing data. The final binary verdict is returned as JSON.
+
+## OnchainOS / Uniswap Integration
+- **OKX Security API (Token Scan)** — Primary oracle for honeypot/tax/blacklist detection
+- **OKX Security API (TX Pre-execution)** — Independent cross-validation of eth_call + fuzzing simulation
+- **OKX DEX API (Quote/Routing)** — Optimized routing for approved trades
+- **HMAC-SHA256 Auth** — Standard OKX API v5 authentication
+- **X Layer RPC (native viem client)** — 3-endpoint round-robin with 1500ms failover
+- **Uniswap AI Skills (swap-integration)** — TWAP oracle deviation patterns for flash loan detection
+- **Uniswap AI Skills (uniswap-v4-security-foundations)** — V4 hook permission risk assessment
+- **Uniswap AI Skills (uniswap-viem)** — EVM integration patterns for pool state reads
+
+## Proof of Work
+- Agentic Wallet address: `0x6e9fb08755b837388a36ced22f26ed64240fb29c`
+- GitHub repo: https://github.com/bitnormie01/guardian-protocol (branch: okx-submission)
+- Verified on-chain contract (GuardianProofLogger): `0x93A3DB5645Cb21DBDfEAB3047Fe01D1A65a8F52F`
+- OKLink verification: https://www.oklink.com/xlayer/address/0x93a3db5645cb21dbdfeab3047fe01d1a65a8f52f
+
+## Why It Matters
+Autonomous agents are executing real trades with real money on X Layer right now. They have no eyes, no instincts, and no way to detect a honeypot from a legitimate token. Guardian gives every agent a security oracle it can call before every single trade — deterministic, machine-readable, fail-closed. It is the missing safety layer for the agentic DeFi stack. Any agent that integrates `@guardian-protocol/skill` gets institutional-grade trade security with a single import.
+
+---
+
 ### 📋 Project Name
 **Guardian Protocol**
 
@@ -156,7 +201,7 @@ An autonomous agent using Guardian will **never accidentally trade a honeypot** 
 
 ```bash
 # Clone & install
-git clone https://github.com/anujkumar2o/guardian-protocol.git
+git clone https://github.com/bitnormie01/guardian-protocol.git
 cd guardian-protocol
 npm install
 
