@@ -507,10 +507,9 @@ This is our **Skill Arena** submission. Guardian Protocol demonstrates what a *r
 
 > **X Layer Mainnet (Chain ID 196)** — [View on OKLink](https://www.oklink.com/xlayer/address/0x93a3db5645cb21dbdfeab3047fe01d1a65a8f52f)
 
-### Contact
+### Author
 
-- **Email:** guardianprotocol@proton.me
-- **Telegram:** @guardianprotocol_okx
+- **Telegram:** [@bitnormie01](https://t.me/bitnormie01)
 
 See [MOLTBOOK_PITCH.md](./MOLTBOOK_PITCH.md) for the full submission document.
 

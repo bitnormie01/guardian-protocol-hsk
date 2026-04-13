@@ -217,10 +217,9 @@ Built to support autonomous agents.
 
 ---
 
-### Contact
+### Author
 
-- **Email:** guardianprotocol@proton.me
-- **Telegram:** @guardianprotocol_okx
+- **Telegram:** [@bitnormie01](https://t.me/bitnormie01)
 
 ---
 
