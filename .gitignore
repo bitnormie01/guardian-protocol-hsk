@@ -4,3 +4,8 @@ dist/
 .env.*
 !.env.example
 *.log
+coverage/
+*.tsbuildinfo
+.vscode/
+.idea/
+.DS_Store

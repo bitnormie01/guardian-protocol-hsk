@@ -3,6 +3,7 @@
 // Guardian Protocol — Live Fire Test Script
 // ==========================================================================
 
+import "dotenv/config";
 import { evaluateTrade, scanToken } from "../src/index.js";
 import type { GuardianEvaluationRequest, TokenScanRequest } from "../src/types/input.js";
 import { execSync } from "child_process";

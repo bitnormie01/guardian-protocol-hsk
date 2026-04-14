@@ -671,15 +671,22 @@ export async function analyzeTokenRisk(
       durationMs,
     });
 
+    const isTokenNotFound = 
+      (err instanceof GuardianError && err.code === ErrorCode.TOKEN_NOT_FOUND) ||
+      errorMessage.includes("404") ||
+      errorMessage.toLowerCase().includes("not found") ||
+      errorMessage.toLowerCase().includes("unsupported");
+
     const errorFlag: RiskFlag = {
-      code: RiskFlagCode.API_UNAVAILABLE,
+      code: isTokenNotFound ? RiskFlagCode.TOKEN_NOT_FOUND : RiskFlagCode.API_UNAVAILABLE,
       severity: "high",
-      message:
-        `Token risk analysis failed for ${tokenAddress}: ${errorMessage}. ` +
-        `Guardian Protocol fails CLOSED — this token is treated as unsafe ` +
-        `until a successful scan can be completed. This protects the agent ` +
-        `from trading a potentially malicious token when security data is ` +
-        `unavailable.`,
+      message: isTokenNotFound
+        ? `Token ${tokenAddress} is unknown or unindexed. Guardian Protocol fails CLOSED — this non-existent token is treated as unsafe to protect against newly deployed or malicious contracts.`
+        : `Token risk analysis failed for ${tokenAddress}: ${errorMessage}. ` +
+          `Guardian Protocol fails CLOSED — this token is treated as unsafe ` +
+          `until a successful scan can be completed. This protects the agent ` +
+          `from trading a potentially malicious token when security data is ` +
+          `unavailable.`,
       source: ANALYZER_NAME,
     };
 
