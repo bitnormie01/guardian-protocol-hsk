@@ -19,10 +19,28 @@ app.use(express.static(path.join(__dirname, '../frontend')));
 
 app.post('/api/evaluate', async (req, res) => {
   try {
-    const { tokenIn, tokenOut, amount, chainId, userAddress } = req.body;
+    const {
+      tokenIn,
+      tokenOut,
+      amountRaw,
+      amount,
+      chainId,
+      userAddress,
+      proposedTxHex,
+      proposedTxTarget,
+    } = req.body;
+    const normalizedAmountRaw = amountRaw || amount;
     
-    if (!tokenIn || !tokenOut || !amount) {
-      return res.status(400).json({ error: 'Missing required parameters: tokenIn, tokenOut, amount' });
+    if (!tokenIn || !tokenOut || !normalizedAmountRaw || !userAddress) {
+      return res.status(400).json({
+        error: 'Missing required parameters: tokenIn, tokenOut, amountRaw, userAddress'
+      });
+    }
+
+    if (proposedTxHex && !proposedTxTarget) {
+      return res.status(400).json({
+        error: 'proposedTxTarget is required when proposedTxHex is provided'
+      });
     }
 
     console.log(`[API] evaluateTrade requested: ${tokenIn} -> ${tokenOut}`);
@@ -30,16 +48,18 @@ app.post('/api/evaluate', async (req, res) => {
     const requestArgs = {
       tokenIn,
       tokenOut,
-      amount,
-      userAddress: userAddress || "0x0000000000000000000000000000000000000001",
-      chainId: chainId || 196
+      amountRaw: normalizedAmountRaw,
+      userAddress,
+      chainId: chainId || 196,
+      proposedTxHex,
+      proposedTxTarget,
     };
 
     const result = await evaluateTrade(requestArgs);
-    res.json(result);
+    return res.json(result);
   } catch (err: any) {
     console.error("[API] Error in evaluateTrade", err);
-    res.status(500).json({ error: err.message || String(err) });
+    return res.status(500).json({ error: err.message || String(err) });
   }
 });
 
@@ -54,10 +74,10 @@ app.post('/api/scan', async (req, res) => {
     console.log(`[API] scanToken requested for: ${tokenAddress}`);
     
     const result = await scanToken({ tokenAddress, chainId: chainId || 196 });
-    res.json(result);
+    return res.json(result);
   } catch (err: any) {
     console.error("[API] Error in scanToken", err);
-    res.status(500).json({ error: err.message || String(err) });
+    return res.status(500).json({ error: err.message || String(err) });
   }
 });
 
@@ -71,11 +91,10 @@ app.post('/api/simulate', async (req, res) => {
       userAddress: userAddress || "0x0000000000000000000000000000000000000001",
       targetAddress
     });
-    // wrap the AnalyzerResult so it matches the frontend's renderResults expectation for single analyzer mode
-    res.json(result);
+    return res.json(result);
   } catch (err: any) {
     console.error("[API] Error in simulateTx", err);
-    res.status(500).json({ error: err.message || String(err) });
+    return res.status(500).json({ error: err.message || String(err) });
   }
 });
 
@@ -91,10 +110,10 @@ app.post('/api/mev', async (req, res) => {
       proposedTxHex,
       chainId || 196
     );
-    res.json(result);
+    return res.json(result);
   } catch (err: any) {
     console.error("[API] Error in analyzeMEVRisk", err);
-    res.status(500).json({ error: err.message || String(err) });
+    return res.status(500).json({ error: err.message || String(err) });
   }
 });
 
@@ -107,10 +126,10 @@ app.post('/api/amm', async (req, res) => {
       estimatedTradeUsd || 1000,
       chainId || 196
     );
-    res.json(result);
+    return res.json(result);
   } catch (err: any) {
     console.error("[API] Error in analyzeAMMPoolRisk", err);
-    res.status(500).json({ error: err.message || String(err) });
+    return res.status(500).json({ error: err.message || String(err) });
   }
 });
 

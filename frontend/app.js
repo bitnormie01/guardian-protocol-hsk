@@ -1,3 +1,8 @@
+import {
+  normalizePipelineResult,
+  normalizeSingleAnalyzerResult,
+} from './ui-adapter.js';
+
 document.addEventListener('DOMContentLoaded', () => {
   // Tab logic
   const tabBtns = document.querySelectorAll('.tab-btn');
@@ -33,9 +38,10 @@ document.addEventListener('DOMContentLoaded', () => {
   
   const flagsList = document.getElementById('flags-list');
   const flagsCount = document.getElementById('flags-count');
+  let latestRequestId = 0;
 
   // Helper for requests
-  async function handleRequest(formId, endpoint, payloadMapper, hideGrid = false) {
+  async function handleRequest(formId, endpoint, payloadMapper, mode) {
     const form = document.getElementById(formId);
     if (!form) return;
     
@@ -48,6 +54,7 @@ document.addEventListener('DOMContentLoaded', () => {
       submitBtn.disabled = true;
       loader.classList.remove('hidden');
       resultsPanel.classList.add('hidden');
+      const requestId = ++latestRequestId;
       
       const payload = payloadMapper(form);
 
@@ -59,18 +66,16 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         
         const data = await response.json();
+        if (requestId !== latestRequestId) return;
+
         if (response.ok) {
-          if (hideGrid) {
-            fullPipelineScores.classList.add('hidden');
-          } else {
-            fullPipelineScores.classList.remove('hidden');
-          }
-          // The single analyzers return an AnalyzerResult. The pipeline returns a GuardianEvaluationResponse.
-          renderResults(data, hideGrid);
+          console.log(`[Guardian UI] ${mode} raw response`, data);
+          renderResults(data, mode);
         } else {
           renderError(data.error || 'Evaluation Failed');
         }
       } catch (error) {
+        if (requestId !== latestRequestId) return;
         renderError(error.message);
       } finally {
         submitBtn.disabled = false;
@@ -83,15 +88,18 @@ document.addEventListener('DOMContentLoaded', () => {
   handleRequest('form-pipeline', '/api/evaluate', (f) => ({
     tokenIn: f.tokenIn.value.trim(),
     tokenOut: f.tokenOut.value.trim(),
-    amount: f.amount.value.trim(),
+    amountRaw: f.amountRaw.value.trim(),
+    userAddress: f.userAddress.value.trim(),
+    proposedTxHex: f.proposedTxHex.value.trim() || undefined,
+    proposedTxTarget: f.proposedTxTarget.value.trim() || undefined,
     chainId: parseInt(f.chainId.value.trim(), 10)
-  }), false);
+  }), 'pipeline');
 
   // 2. Token Risk
   handleRequest('form-token', '/api/scan', (f) => ({
     tokenAddress: f.tokenAddress.value.trim(),
     chainId: parseInt(f.chainId.value.trim(), 10)
-  }), true);
+  }), 'token');
 
   // 3. TX Simulation
   handleRequest('form-sim', '/api/simulate', (f) => ({
@@ -99,7 +107,7 @@ document.addEventListener('DOMContentLoaded', () => {
     userAddress: f.userAddress.value.trim(),
     targetAddress: f.targetAddress.value.trim(),
     chainId: parseInt(f.chainId.value.trim(), 10)
-  }), true);
+  }), 'simulate');
 
   // 4. MEV Detection
   handleRequest('form-mev', '/api/mev', (f) => ({
@@ -107,54 +115,55 @@ document.addEventListener('DOMContentLoaded', () => {
     tokenOut: f.tokenOut.value.trim(),
     estimatedTradeUsd: parseInt(f.estimatedTradeUsd.value.trim(), 10),
     chainId: parseInt(f.chainId.value.trim(), 10)
-  }), true);
+  }), 'mev');
 
   // 5. AMM Pool
   handleRequest('form-amm', '/api/amm', (f) => ({
     poolAddress: f.poolAddress.value.trim(),
     estimatedTradeUsd: parseInt(f.estimatedTradeUsd.value.trim(), 10),
     chainId: parseInt(f.chainId.value.trim(), 10)
-  }), true);
+  }), 'amm');
 
-  function renderResults(data, isSingleAnalyzer) {
+  function resetAnalyzerCards() {
+    analyzerCards.token.textContent = '--';
+    analyzerCards.sim.textContent = '--';
+    analyzerCards.mev.textContent = '--';
+    analyzerCards.amm.textContent = '--';
+  }
+
+  function renderResults(data, mode) {
     if (data.error) return renderError(data.error);
 
     resultsPanel.classList.remove('hidden');
+    const isPipeline = mode === 'pipeline';
+    fullPipelineScores.classList.toggle('hidden', !isPipeline);
 
-    if (isSingleAnalyzer) {
-      const score = data.score !== undefined ? data.score : (data.safetyScore?.overall !== undefined ? data.safetyScore.overall : '--');
-      let approved = true;
-      if (data.simulationSuccess !== undefined) {
-        approved = data.simulationSuccess;
-      } else if (data.isSafe !== undefined) {
-        approved = data.isSafe;
-      } else if (data.hasFatalRisk !== undefined) {
-        approved = !data.hasFatalRisk;
-      }
+    if (isPipeline) {
+      const viewModel = normalizePipelineResult(data);
 
-      verdictBanner.className = 'verdict-banner ' + (approved ? 'approved' : 'blocked');
-      verdictText.textContent = approved ? '✅ PASSED' : '⛔ FAILED';
-      verdictScore.textContent = `Score: ${score}/100`;
+      verdictBanner.className = 'verdict-banner ' + viewModel.verdictTone;
+      verdictText.textContent = viewModel.verdictText;
+      verdictScore.textContent = viewModel.verdictScore;
 
-      renderFlags(data.flags);
-    } else {
-      // GuardianEvaluationResponse (has isSafeToExecute, safetyScore)
-      const isSafeToExecute = data.isSafeToExecute;
-      const safetyScore = data.safetyScore;
-      const flags = data.flags;
+      analyzerCards.token.textContent =
+        viewModel.analyzerScores.tokenRisk ?? '--';
+      analyzerCards.sim.textContent =
+        viewModel.analyzerScores.txSimulation ?? '--';
+      analyzerCards.mev.textContent =
+        viewModel.analyzerScores.mevRisk ?? '--';
+      analyzerCards.amm.textContent =
+        viewModel.analyzerScores.ammPoolRisk ?? '--';
 
-      verdictBanner.className = 'verdict-banner ' + (isSafeToExecute ? 'approved' : 'blocked');
-      verdictText.textContent = isSafeToExecute ? '✅ APPROVED' : '⛔ BLOCKED';
-      verdictScore.textContent = `Score: ${safetyScore?.overall || 0}/100 (${safetyScore?.tier || 'UNKNOWN'})`;
-
-      const bd = safetyScore?.breakdown || {};
-      analyzerCards.token.textContent = bd.tokenRisk !== undefined ? bd.tokenRisk : '--';
-      analyzerCards.sim.textContent = bd.txSimulation !== undefined ? bd.txSimulation : '--';
-      analyzerCards.mev.textContent = bd.mevRisk !== undefined ? bd.mevRisk : '--';
-      analyzerCards.amm.textContent = bd.ammPoolRisk !== undefined ? bd.ammPoolRisk : '--';
-
-      renderFlags(flags);
+      renderFlags(viewModel.flags);
+      return;
     }
+
+    resetAnalyzerCards();
+    const viewModel = normalizeSingleAnalyzerResult(mode, data);
+    verdictBanner.className = 'verdict-banner ' + viewModel.verdictTone;
+    verdictText.textContent = viewModel.verdictText;
+    verdictScore.textContent = viewModel.verdictScore;
+    renderFlags(viewModel.flags);
   }
 
   function renderFlags(flags) {
@@ -175,11 +184,12 @@ document.addEventListener('DOMContentLoaded', () => {
         li.innerHTML = `
           <div class="flag-code" style="color: ${colorMap[f.severity] || '#fff'}">${f.severity.toUpperCase()} | ${f.code}</div>
           <div class="flag-message">${f.message}</div>
+          ${f.source ? `<div class="flag-source">Source: ${f.source}</div>` : ''}
         `;
         flagsList.appendChild(li);
       });
     } else {
-      flagsList.innerHTML = '<li class="flag-item info">No flags detected. Looks clean!</li>';
+      flagsList.innerHTML = '<li class="flag-item info">No flags returned by Guardian.</li>';
     }
   }
 

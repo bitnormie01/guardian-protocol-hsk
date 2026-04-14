@@ -67,8 +67,20 @@
             <input type="text" name="tokenOut" value="0x1E4a5963aBFD975d8c9021ce480b42188849D41d" required>
           </div>
           <div class="input-group">
-            <label>Amount (wei)</label>
-            <input type="text" name="amount" value="1000000000000000000" required>
+            <label>Amount Raw (Smallest Unit)</label>
+            <input type="text" name="amountRaw" value="1000000000000000000" required>
+          </div>
+          <div class="input-group">
+            <label>User Address</label>
+            <input type="text" name="userAddress" value="0x6e9fb08755b837388a36ced22f26ed64240fb29c" required>
+          </div>
+          <div class="input-group">
+            <label>Proposed TX Hex Data (Optional)</label>
+            <input type="text" name="proposedTxHex" value="">
+          </div>
+          <div class="input-group">
+            <label>Proposed TX Target (Required With TX Hex)</label>
+            <input type="text" name="proposedTxTarget" value="">
           </div>
           <div class="input-group">
             <label>Chain ID</label>
@@ -190,6 +202,6 @@
     </div>
   </main>
 
-  <script src="app.js"></script>
+  <script type="module" src="app.js"></script>
 </body>
 </html>
