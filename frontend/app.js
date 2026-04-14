@@ -121,11 +121,17 @@ document.addEventListener('DOMContentLoaded', () => {
     resultsPanel.classList.remove('hidden');
 
     if (isSingleAnalyzer) {
-      // Single AnalyzerResult (has score, hasFatalRisk, flags)
-      const approved = !data.hasFatalRisk;
+      const score = data.score !== undefined ? data.score : (data.safetyScore?.overall !== undefined ? data.safetyScore.overall : '--');
+      let approved = true;
+      if (data.isSafe !== undefined) {
+        approved = data.isSafe;
+      } else if (data.hasFatalRisk !== undefined) {
+        approved = !data.hasFatalRisk;
+      }
+
       verdictBanner.className = 'verdict-banner ' + (approved ? 'approved' : 'blocked');
       verdictText.textContent = approved ? '✅ PASSED' : '⛔ FAILED';
-      verdictScore.textContent = `Score: ${data.score}/100`;
+      verdictScore.textContent = `Score: ${score}/100`;
 
       renderFlags(data.flags);
     } else {
