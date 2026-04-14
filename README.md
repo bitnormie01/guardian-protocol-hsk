@@ -263,7 +263,7 @@ The risk engine is not a calculator — it's an adversarial model:
 
 ```bash
 # Clone
-git clone https://github.com/anujkumar2o/guardian-protocol.git
+git clone https://github.com/bitnormie01/guardian-protocol
 cd guardian-protocol
 
 # Install
