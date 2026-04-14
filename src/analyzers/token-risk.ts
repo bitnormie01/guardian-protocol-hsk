@@ -67,6 +67,7 @@ import {
 } from "../services/goplus-enrichment.js";
 import { GuardianError, ErrorCode } from "../utils/errors.js";
 import { logger } from "../utils/logger.js";
+import { XLayerRPCClient } from "../services/xlayer-rpc-client.js";
 
 // ---------------------------------------------------------------------------
 // Configurable Thresholds
@@ -546,6 +547,62 @@ export async function analyzeTokenRisk(
   });
 
   try {
+    // ------------------------------------------------------------------
+    // Step 0: Verify the address is actually a contract
+    // ------------------------------------------------------------------
+    const rpcClient = new XLayerRPCClient(chainId);
+    
+    let bytecode: string | null = null;
+    try {
+      bytecode = await rpcClient.getRPCManager().execute(
+        (client) => client.getBytecode({ address: tokenAddress as `0x${string}` }),
+        "getBytecode"
+      );
+    } catch (err) {
+      logger.warn(`[${ANALYZER_NAME}] Failed to read bytecode, treating as non-contract`, {
+        tokenAddress,
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
+    
+    if (!bytecode || bytecode === "0x" || bytecode.length <= 2) {
+      logger.error(`[${ANALYZER_NAME}] ⛔ NOT A CONTRACT`, {
+        tokenAddress,
+        chainId,
+        bytecode: bytecode || "null",
+      });
+
+      const notContractFlag: RiskFlag = {
+        code: RiskFlagCode.UNVERIFIED_CONTRACT,
+        severity: "critical",
+        message:
+          `FATAL: Address ${tokenAddress} is NOT a contract — it has no bytecode deployed. ` +
+          `This could be an EOA (externally owned account), a non-existent address, or ` +
+          `a malicious placeholder. Guardian Protocol fails CLOSED — DO NOT EXECUTE THIS TRADE.`,
+        source: ANALYZER_NAME,
+      };
+
+      return {
+        analyzerName: ANALYZER_NAME,
+        flags: [notContractFlag],
+        score: 0,
+        durationMs: Math.round(performance.now() - startTime),
+        data: {
+          error: true,
+          errorCode: ErrorCode.TOKEN_NOT_FOUND,
+          errorMessage: "Address is not a contract",
+          tokenAddress,
+          chainId,
+          isContract: false,
+        },
+      };
+    }
+
+    logger.debug(`[${ANALYZER_NAME}] Contract bytecode verified`, {
+      tokenAddress,
+      bytecodeLength: bytecode.length,
+    });
+
     // ------------------------------------------------------------------
     // Step 1: Fetch raw security data from OKX
     // ------------------------------------------------------------------
