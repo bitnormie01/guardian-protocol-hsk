@@ -124,7 +124,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if (isSingleAnalyzer) {
       const score = data.score !== undefined ? data.score : (data.safetyScore?.overall !== undefined ? data.safetyScore.overall : '--');
       let approved = true;
-      if (data.isSafe !== undefined) {
+      if (data.simulationSuccess !== undefined) {
+        approved = data.simulationSuccess;
+      } else if (data.isSafe !== undefined) {
         approved = data.isSafe;
       } else if (data.hasFatalRisk !== undefined) {
         approved = !data.hasFatalRisk;
