@@ -97,6 +97,7 @@ document.addEventListener('DOMContentLoaded', () => {
   handleRequest('form-sim', '/api/simulate', (f) => ({
     proposedTxHex: f.proposedTxHex.value.trim(),
     userAddress: f.userAddress.value.trim(),
+    targetAddress: f.targetAddress.value.trim(),
     chainId: parseInt(f.chainId.value.trim(), 10)
   }), true);
 

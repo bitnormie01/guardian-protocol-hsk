@@ -524,7 +524,7 @@ export async function simulateTx(
     simulateTransaction(
       request.proposedTxHex,
       request.userAddress,
-      request.userAddress, // Simplified — full eval passes the router address
+      request.targetAddress || request.userAddress,
       null,
       null,
       18,
@@ -540,6 +540,9 @@ export async function simulateTx(
     evaluationId,
     timestamp: new Date().toISOString(),
     chainId,
+    safetyScore: {
+      overall: result.score
+    },
     simulationSuccess: (simData["simulationSuccess"] as boolean) ?? false,
     gasUsed: (simData["gasUsed"] as string) ?? "0",
     stateChanges: [], // Populated in Phase 6 with full trace analysis

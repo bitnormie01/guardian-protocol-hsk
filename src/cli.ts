@@ -263,18 +263,21 @@ program
     "User wallet address",
     "0x0000000000000000000000000000000000000001",
   )
+  .option("--to <address>", "Target contract address")
   .option("-c, --chain <chainId>", "Chain ID (196=mainnet, 195=testnet)", "196")
-  .action(async (txHex: string, options: { user: string; chain: string }) => {
+  .action(async (txHex: string, options: { user: string; to?: string; chain: string }) => {
     try {
       // --- Input Validation ---
       const chainId = Number(options.chain);
       validateChainId(chainId);
       validateAddress(options.user, "user address");
       validateHex(txHex, "transaction hex");
+      if (options.to) validateAddress(options.to, "target address");
 
       const request: TxSimulationRequest = {
         proposedTxHex: txHex as HexString,
         userAddress: options.user as Address,
+        targetAddress: options.to as Address | undefined,
         chainId: chainId as 196 | 195,
       };
 

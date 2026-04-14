@@ -147,6 +147,9 @@ export interface TxSimulationRequest {
   /** The originating wallet address. */
   userAddress: Address;
 
+  /** The destination contract address. */
+  targetAddress?: Address;
+
   /** Chain ID — defaults to 196 (X Layer mainnet). */
   chainId?: SupportedChainId;
 }

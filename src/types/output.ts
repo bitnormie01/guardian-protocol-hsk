@@ -248,6 +248,9 @@ export interface TxSimulationResponse {
   evaluationId: string;
   timestamp: string;
   chainId: number;
+  safetyScore: {
+    overall: number;
+  };
   simulationSuccess: boolean;
   gasUsed: string;
   stateChanges: Array<{

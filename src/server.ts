@@ -63,12 +63,13 @@ app.post('/api/scan', async (req, res) => {
 
 app.post('/api/simulate', async (req, res) => {
   try {
-    const { proposedTxHex, chainId, userAddress } = req.body;
+    const { proposedTxHex, chainId, userAddress, targetAddress } = req.body;
     if (!proposedTxHex) return res.status(400).json({ error: 'Missing proposedTxHex' });
     const result = await simulateTx({
       proposedTxHex,
       chainId: chainId || 196,
-      userAddress: userAddress || "0x0000000000000000000000000000000000000001"
+      userAddress: userAddress || "0x0000000000000000000000000000000000000001",
+      targetAddress
     });
     // wrap the AnalyzerResult so it matches the frontend's renderResults expectation for single analyzer mode
     res.json(result);
