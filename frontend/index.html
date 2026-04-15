@@ -3,203 +3,378 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Guardian Protocol | BuildX Hackathon</title>
+  <title>Guardian Protocol | HashKey Chain Security Oracle</title>
+  <meta name="description" content="Fail-closed AI security middleware for autonomous DeFi agents on HashKey Chain. 4-analyzer parallel architecture with on-chain proof logging.">
   <link rel="stylesheet" href="styles.css">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 </head>
 <body>
-  <div class="background-glass"></div>
-  
-  <header>
-    <div class="logo">
-      <span class="shield">🛡️</span> Guardian Protocol
+  <div class="bg-grid"></div>
+  <div class="bg-glow bg-glow-1"></div>
+  <div class="bg-glow bg-glow-2"></div>
+
+  <header id="main-header">
+    <div class="header-inner">
+      <div class="logo">
+        <div class="logo-icon">
+          <svg viewBox="0 0 32 32" width="28" height="28" fill="none">
+            <path d="M16 2L4 9v14l12 7 12-7V9L16 2z" stroke="currentColor" stroke-width="2" fill="rgba(0,200,180,0.1)"/>
+            <path d="M16 8l-6 3.5v7L16 22l6-3.5v-7L16 8z" stroke="currentColor" stroke-width="1.5" fill="rgba(0,200,180,0.15)"/>
+            <circle cx="16" cy="15" r="2.5" fill="currentColor"/>
+          </svg>
+        </div>
+        <span class="logo-text">Guardian Protocol</span>
+        <span class="logo-version">v0.2.1</span>
+      </div>
+      <nav>
+        <div class="chain-badge">
+          <span class="chain-dot"></span>
+          HashKey Chain
+        </div>
+        <span class="nav-separator">|</span>
+        <span class="nav-track">Horizon Hackathon · AI Track</span>
+      </nav>
     </div>
-    <nav>
-      <span>OKX BuildX Agent Track</span>
-    </nav>
   </header>
 
   <main>
-    <section class="hero">
-      <h1>Fail-Closed Security for Autonomous Agents</h1>
-      <p>Test the 4-phase guardian evaluating engine in real-time. Input a token pair to generate a live risk verdict.</p>
-      
-      <div class="analyzers-info">
-        <div class="analyzer-info-card">
-          <h3>1. Token Risk Analyzer</h3>
-          <p>Dual-oracle contract scanning (OKX + GoPlus) to detect honeypots, malicious code, and predatory taxes.</p>
+    <!-- Hero Section -->
+    <section class="hero" id="hero">
+      <div class="hero-badge">FAIL-CLOSED BY DEFAULT</div>
+      <h1>Security Oracle for<br><span class="gradient-text">Autonomous AI Agents</span></h1>
+      <p class="hero-sub">4-analyzer parallel architecture evaluating every trade <em>before</em> execution on HashKey Chain. Deterministic machine-readable verdicts in under 2 seconds.</p>
+
+      <div class="stats-bar">
+        <div class="stat-item">
+          <span class="stat-value">76/76</span>
+          <span class="stat-label">Tests Passing</span>
         </div>
-        <div class="analyzer-info-card">
-          <h3>2. TX Simulation & Fuzzing</h3>
-          <p>8-variant invariant fuzzing to dry-run your swap and catch state-dependent traps and abnormal slippage before execution.</p>
+        <div class="stat-divider"></div>
+        <div class="stat-item">
+          <span class="stat-value">&lt;2s</span>
+          <span class="stat-label">Eval Latency</span>
         </div>
-        <div class="analyzer-info-card">
-          <h3>3. MEV Detection</h3>
-          <p>Tracks builder toxicity and private MEV flow to prevent profitable sandwich attacks and calculate dynamic slippage.</p>
+        <div class="stat-divider"></div>
+        <div class="stat-item">
+          <span class="stat-value">30+</span>
+          <span class="stat-label">Risk Flag Codes</span>
         </div>
-        <div class="analyzer-info-card">
-          <h3>4. AMM Pool Analysis</h3>
-          <p>Deep on-chain inspection of concentrated liquidity pools (Uniswap V3) to detect tick manipulation and thin execution liquidity.</p>
+        <div class="stat-divider"></div>
+        <div class="stat-item">
+          <span class="stat-value" id="on-chain-count">3</span>
+          <span class="stat-label">On-Chain Proofs</span>
         </div>
       </div>
     </section>
 
-    <div class="dashboard">
-      <section class="input-panel glass-panel">
-        
-        <div class="tabs">
-          <button class="tab-btn active" data-target="form-pipeline">Full Pipeline</button>
-          <button class="tab-btn" data-target="form-token">Token Risk</button>
-          <button class="tab-btn" data-target="form-sim">TX Simulation</button>
-          <button class="tab-btn" data-target="form-mev">MEV Detect</button>
-          <button class="tab-btn" data-target="form-amm">AMM Pool</button>
+    <!-- Analyzers -->
+    <section class="analyzers-section">
+      <div class="analyzers-grid-info">
+        <div class="analyzer-info-card" data-analyzer="token">
+          <div class="aic-icon">🔍</div>
+          <h3>Token Risk Analyzer</h3>
+          <p>GoPlus dual-oracle scanning — honeypot detection, ownership checks, tax analysis, holder concentration, blacklist mechanisms.</p>
+          <div class="aic-tag">Phase 2</div>
         </div>
-
-        <!-- FULL PIPELINE -->
-        <form id="form-pipeline" class="tab-content active">
-          <h2>Evaluate Trade</h2>
-          <div class="input-group">
-            <label>Token In Address</label>
-            <input type="text" name="tokenIn" value="0xe538905cf8410324e03A5A23C1c177a474D59b2b" required>
-          </div>
-          <div class="input-group">
-            <label>Token Out Address</label>
-            <input type="text" name="tokenOut" value="0x1E4a5963aBFD975d8c9021ce480b42188849D41d" required>
-          </div>
-          <div class="input-group">
-            <label>Amount Raw (Smallest Unit)</label>
-            <input type="text" name="amountRaw" value="1000000000000000000" required>
-          </div>
-          <div class="input-group">
-            <label>User Address</label>
-            <input type="text" name="userAddress" value="0x6e9fb08755b837388a36ced22f26ed64240fb29c" required>
-          </div>
-          <div class="input-group">
-            <label>Proposed TX Hex Data (Optional)</label>
-            <input type="text" name="proposedTxHex" value="">
-          </div>
-          <div class="input-group">
-            <label>Proposed TX Target (Required With TX Hex)</label>
-            <input type="text" name="proposedTxTarget" value="">
-          </div>
-          <div class="input-group">
-            <label>Chain ID</label>
-            <input type="number" name="chainId" value="196" required>
-          </div>
-          <button type="submit" class="glow-btn">Analyze Trade <span class="loader hidden"></span></button>
-        </form>
-
-        <!-- TOKEN RISK -->
-        <form id="form-token" class="tab-content hidden">
-          <h2>Scan Token</h2>
-          <div class="input-group">
-            <label>Token Address (e.g. USDC)</label>
-            <input type="text" name="tokenAddress" value="0x1E4a5963aBFD975d8c9021ce480b42188849D41d" required>
-          </div>
-          <div class="input-group">
-            <label>Chain ID</label>
-            <input type="number" name="chainId" value="196" required>
-          </div>
-          <button type="submit" class="glow-btn">Scan Token <span class="loader hidden"></span></button>
-        </form>
-
-        <!-- TX SIMULATION -->
-        <form id="form-sim" class="tab-content hidden">
-          <h2>Simulate Transaction</h2>
-          <div class="input-group">
-            <label>Proposed TX Hex Data (Drain Attempt)</label>
-            <input type="text" name="proposedTxHex" value="0xa9059cbb0000000000000000000000001e4a5963abfd975d8c9021ce480b42188849d41d0000000000000000000000000000000000000000000000000de0b6b3a7640000" required>
-          </div>
-          <div class="input-group">
-            <label>User Address</label>
-            <input type="text" name="userAddress" value="0x0000000000000000000000000000000000000001" required>
-          </div>
-          <div class="input-group">
-            <label>Target Contract Address (To)</label>
-            <input type="text" name="targetAddress" value="0x1E4a5963aBFD975d8c9021ce480b42188849D41d" required>
-          </div>
-          <div class="input-group">
-            <label>Chain ID</label>
-            <input type="number" name="chainId" value="196" required>
-          </div>
-          <button type="submit" class="glow-btn">Simulate TX <span class="loader hidden"></span></button>
-        </form>
-
-        <!-- MEV DETECTION -->
-        <form id="form-mev" class="tab-content hidden">
-          <h2>Detect MEV Vulnerability</h2>
-          <div class="input-group">
-            <label>Token In</label>
-            <input type="text" name="tokenIn" value="0xe538905cf8410324e03A5A23C1c177a474D59b2b" required>
-          </div>
-          <div class="input-group">
-            <label>Token Out</label>
-            <input type="text" name="tokenOut" value="0x1E4a5963aBFD975d8c9021ce480b42188849D41d" required>
-          </div>
-          <div class="input-group">
-            <label>Estimated Trade USD</label>
-            <input type="number" name="estimatedTradeUsd" value="2500" required>
-          </div>
-          <div class="input-group">
-            <label>Chain ID</label>
-            <input type="number" name="chainId" value="196" required>
-          </div>
-          <button type="submit" class="glow-btn">Analyze MEV <span class="loader hidden"></span></button>
-        </form>
-
-        <!-- AMM POOL -->
-        <form id="form-amm" class="tab-content hidden">
-          <h2>AMM Pool Analytics</h2>
-          <div class="input-group">
-            <label>Concentrated Pool Address (WOKB/USDC)</label>
-            <input type="text" name="poolAddress" value="0xd810D4d68e7d6Ec9Bf0a841510910D4cbced0c2E" required>
-          </div>
-          <div class="input-group">
-            <label>Estimated Trade USD</label>
-            <input type="number" name="estimatedTradeUsd" value="5000" required>
-          </div>
-          <div class="input-group">
-            <label>Chain ID</label>
-            <input type="number" name="chainId" value="196" required>
-          </div>
-          <button type="submit" class="glow-btn">Analyze Pool <span class="loader hidden"></span></button>
-        </form>
-
-      </section>
-
-      <section class="results-panel glass-panel hidden" id="results-panel">
-        <div class="verdict-banner" id="verdict-banner">
-          <h2 id="verdict-text">VERDICT: PENDING</h2>
-          <div class="verdict-score" id="verdict-score">Score: --/100</div>
+        <div class="analyzer-info-card" data-analyzer="sim">
+          <div class="aic-icon">⚡</div>
+          <h3>TX Simulation &amp; Fuzzing</h3>
+          <p>8-variant invariant fuzzer via eth_call — cross-RPC validation, revert detection, state-dependent trap identification.</p>
+          <div class="aic-tag">Phase 3</div>
         </div>
-
-        <div class="analyzers-grid" id="full-pipeline-scores">
-          <div class="analyzer-card" id="analyzer-token">
-            <h3>Token Risk</h3>
-            <div class="score">--</div>
-          </div>
-          <div class="analyzer-card" id="analyzer-sim">
-            <h3>TX Simulation</h3>
-            <div class="score">--</div>
-          </div>
-          <div class="analyzer-card" id="analyzer-mev">
-            <h3>MEV Detection</h3>
-            <div class="score">--</div>
-          </div>
-          <div class="analyzer-card" id="analyzer-amm">
-            <h3>AMM Pool</h3>
-            <div class="score">--</div>
-          </div>
+        <div class="analyzer-info-card" data-analyzer="mev">
+          <div class="aic-icon">🛡️</div>
+          <h3>MEV Detection Engine</h3>
+          <p>Builder toxicity scoring, sandwich attack patterns, dynamic slippage caps calibrated to pool tick depth.</p>
+          <div class="aic-tag">Phase 4</div>
         </div>
-
-        <div class="flags-section">
-          <h3>Risk Flags (<span id="flags-count">0</span>)</h3>
-          <ul id="flags-list">
-            <!-- Flags rendered here via JS -->
-          </ul>
+        <div class="analyzer-info-card" data-analyzer="amm">
+          <div class="aic-icon">📊</div>
+          <h3>AMM Pool Analysis</h3>
+          <p>Uniswap V3 slot0/liquidity/TWAP reads — manipulation detection, concentrated liquidity risk, price impact modeling.</p>
+          <div class="aic-tag">Phase 4.5</div>
         </div>
-      </section>
-    </div>
+      </div>
+    </section>
+
+    <!-- Dashboard -->
+    <section class="dashboard-section" id="dashboard">
+      <div class="dashboard">
+        <section class="input-panel glass-panel">
+          <div class="tabs" id="main-tabs">
+            <button class="tab-btn active" data-target="form-pipeline" id="tab-pipeline">Full Pipeline</button>
+            <button class="tab-btn" data-target="form-token" id="tab-token">Token Scan</button>
+            <button class="tab-btn" data-target="form-sim" id="tab-sim">TX Simulation</button>
+            <button class="tab-btn" data-target="form-mev" id="tab-mev">MEV Detect</button>
+            <button class="tab-btn" data-target="form-amm" id="tab-amm">AMM Pool</button>
+          </div>
+
+          <!-- FULL PIPELINE -->
+          <form id="form-pipeline" class="tab-content active">
+            <h2>Evaluate Trade</h2>
+            <p class="form-desc">Full 4-analyzer parallel evaluation. Returns structured JSON verdict with isSafeToExecute boolean.</p>
+            <div class="input-group">
+              <label for="pipeline-tokenIn">Token In Address</label>
+              <input type="text" id="pipeline-tokenIn" name="tokenIn" value="0xefd4bc9afd210517803f293ababd701caeecdfd0" required placeholder="0x...">
+              <span class="input-hint">ERC-20 Token Address</span>
+            </div>
+            <div class="input-group">
+              <label for="pipeline-tokenOut">Token Out Address</label>
+              <input type="text" id="pipeline-tokenOut" name="tokenOut" value="0xf1b50ed67a9e2cc94ad3c477779e2d4cbfff9029" required placeholder="0x...">
+              <span class="input-hint">ERC-20 Token Address</span>
+            </div>
+            <div class="input-group">
+              <label for="pipeline-amount">Amount Raw (Wei)</label>
+              <input type="text" id="pipeline-amount" name="amountRaw" value="1000000000000000000" required>
+              <span class="input-hint">1.0 token (18 decimals)</span>
+            </div>
+            <div class="input-group">
+              <label for="pipeline-user">User Address</label>
+              <input type="text" id="pipeline-user" name="userAddress" value="0x2B6E71C59f571969Ae9C32373aa4Ce48054cbF27" required>
+            </div>
+            <div class="input-row">
+              <div class="input-group">
+                <label for="pipeline-txhex">Proposed TX Hex <span class="optional">(Optional)</span></label>
+                <input type="text" id="pipeline-txhex" name="proposedTxHex" value="" placeholder="0x...">
+              </div>
+              <div class="input-group">
+                <label for="pipeline-txtarget">TX Target <span class="optional">(With TX Hex)</span></label>
+                <input type="text" id="pipeline-txtarget" name="proposedTxTarget" value="" placeholder="0x...">
+              </div>
+            </div>
+            <div class="input-group chain-select">
+              <label for="pipeline-chain">Chain</label>
+              <select id="pipeline-chain" name="chainId">
+                <option value="177" selected>HashKey Chain Mainnet (177)</option>
+              </select>
+            </div>
+            <button type="submit" class="glow-btn" id="btn-pipeline">
+              <span class="btn-text">Analyze Trade</span>
+              <span class="loader hidden"></span>
+            </button>
+          </form>
+
+          <!-- TOKEN RISK -->
+          <form id="form-token" class="tab-content hidden">
+            <h2>Scan Token</h2>
+            <p class="form-desc">Lightweight single-token pre-screening via GoPlus dual-oracle. No trade context needed.</p>
+            <div class="input-group">
+              <label for="token-address">Token Address</label>
+              <input type="text" id="token-address" name="tokenAddress" value="0xefd4bc9afd210517803f293ababd701caeecdfd0" required placeholder="0x...">
+              <span class="input-hint">ERC-20 Token Address</span>
+            </div>
+            <div class="input-group chain-select">
+              <label for="token-chain">Chain</label>
+              <select id="token-chain" name="chainId">
+                <option value="177" selected>HashKey Chain Mainnet (177)</option>
+              </select>
+            </div>
+            <button type="submit" class="glow-btn" id="btn-token">
+              <span class="btn-text">Scan Token</span>
+              <span class="loader hidden"></span>
+            </button>
+          </form>
+
+          <!-- TX SIMULATION -->
+          <form id="form-sim" class="tab-content hidden">
+            <h2>Simulate Transaction</h2>
+            <p class="form-desc">8-variant invariant fuzzer via eth_call. Detects reverts, state-dependent traps, and gas anomalies.</p>
+            <div class="input-group">
+              <label for="sim-txhex">Proposed TX Hex Data</label>
+              <input type="text" id="sim-txhex" name="proposedTxHex" value="0xa9059cbb0000000000000000000000001111111111111111111111111111111111111111000000000000000000000000000000000000000000000000016345785d8a0000" required>
+              <span class="input-hint">ERC-20 transfer(address,uint256) calldata</span>
+            </div>
+            <div class="input-group">
+              <label for="sim-user">User Address (from)</label>
+              <input type="text" id="sim-user" name="userAddress" value="0x2B6E71C59f571969Ae9C32373aa4Ce48054cbF27" required>
+            </div>
+            <div class="input-group">
+              <label for="sim-target">Target Contract (to)</label>
+              <input type="text" id="sim-target" name="targetAddress" value="0xefd4bc9afd210517803f293ababd701caeecdfd0" required>
+              <span class="input-hint">Target contract address</span>
+            </div>
+            <div class="input-group chain-select">
+              <label for="sim-chain">Chain</label>
+              <select id="sim-chain" name="chainId">
+                <option value="177" selected>HashKey Chain Mainnet (177)</option>
+              </select>
+            </div>
+            <button type="submit" class="glow-btn" id="btn-sim">
+              <span class="btn-text">Simulate TX</span>
+              <span class="loader hidden"></span>
+            </button>
+          </form>
+
+          <!-- MEV DETECTION -->
+          <form id="form-mev" class="tab-content hidden">
+            <h2>Detect MEV Vulnerability</h2>
+            <p class="form-desc">Builder toxicity scoring and sandwich attack pattern detection with dynamic slippage cap enforcement.</p>
+            <div class="input-group">
+              <label for="mev-tokenin">Token In</label>
+              <input type="text" id="mev-tokenin" name="tokenIn" value="0xefd4bc9afd210517803f293ababd701caeecdfd0" required placeholder="0x...">
+            </div>
+            <div class="input-group">
+              <label for="mev-tokenout">Token Out</label>
+              <input type="text" id="mev-tokenout" name="tokenOut" value="0xf1b50ed67a9e2cc94ad3c477779e2d4cbfff9029" required placeholder="0x...">
+            </div>
+            <div class="input-group">
+              <label for="mev-usd">Estimated Trade USD</label>
+              <input type="number" id="mev-usd" name="estimatedTradeUsd" value="2500" required>
+            </div>
+            <div class="input-group chain-select">
+              <label for="mev-chain">Chain</label>
+              <select id="mev-chain" name="chainId">
+                <option value="177" selected>HashKey Chain Mainnet (177)</option>
+              </select>
+            </div>
+            <button type="submit" class="glow-btn" id="btn-mev">
+              <span class="btn-text">Analyze MEV</span>
+              <span class="loader hidden"></span>
+            </button>
+          </form>
+
+          <!-- AMM POOL -->
+          <form id="form-amm" class="tab-content hidden">
+            <h2>AMM Pool Analytics</h2>
+            <p class="form-desc">Uniswap V3 concentrated liquidity analysis — slot0, liquidity depth, TWAP deviation, tick manipulation detection.</p>
+            <div class="input-group">
+              <label for="amm-pool">Concentrated Pool Address</label>
+              <input type="text" id="amm-pool" name="poolAddress" value="0xd136e36610f35e0cc3cad40de858c151f2aa65d4" required>
+              <span class="input-hint">Enter a Uniswap V3 pool address on HashKey Chain</span>
+            </div>
+            <div class="input-group">
+              <label for="amm-usd">Estimated Trade USD</label>
+              <input type="number" id="amm-usd" name="estimatedTradeUsd" value="5000" required>
+            </div>
+            <div class="input-group chain-select">
+              <label for="amm-chain">Chain</label>
+              <select id="amm-chain" name="chainId">
+                <option value="177" selected>HashKey Chain Mainnet (177)</option>
+              </select>
+            </div>
+            <button type="submit" class="glow-btn" id="btn-amm">
+              <span class="btn-text">Analyze Pool</span>
+              <span class="loader hidden"></span>
+            </button>
+          </form>
+
+        </section>
+
+        <!-- Results Panel -->
+        <section class="results-panel glass-panel hidden" id="results-panel">
+          <div class="verdict-banner" id="verdict-banner">
+            <div class="verdict-icon" id="verdict-icon">⏳</div>
+            <h2 id="verdict-text">VERDICT: PENDING</h2>
+            <div class="verdict-score" id="verdict-score">Score: --/100</div>
+            <div class="verdict-chain">HashKey Chain Mainnet (177)</div>
+          </div>
+
+          <div class="analyzers-grid" id="full-pipeline-scores">
+            <div class="analyzer-card" id="analyzer-token">
+              <div class="ac-header">
+                <span class="ac-icon">🔍</span>
+                <h3>Token Risk</h3>
+              </div>
+              <div class="score">--</div>
+            </div>
+            <div class="analyzer-card" id="analyzer-sim">
+              <div class="ac-header">
+                <span class="ac-icon">⚡</span>
+                <h3>TX Simulation</h3>
+              </div>
+              <div class="score">--</div>
+            </div>
+            <div class="analyzer-card" id="analyzer-mev">
+              <div class="ac-header">
+                <span class="ac-icon">🛡️</span>
+                <h3>MEV Detection</h3>
+              </div>
+              <div class="score">--</div>
+            </div>
+            <div class="analyzer-card" id="analyzer-amm">
+              <div class="ac-header">
+                <span class="ac-icon">📊</span>
+                <h3>AMM Pool</h3>
+              </div>
+              <div class="score">--</div>
+            </div>
+          </div>
+
+          <div class="eval-meta" id="eval-meta">
+            <div class="meta-item">
+              <span class="meta-label">Evaluation ID</span>
+              <span class="meta-value" id="meta-eval-id">—</span>
+            </div>
+            <div class="meta-item">
+              <span class="meta-label">Duration</span>
+              <span class="meta-value" id="meta-duration">—</span>
+            </div>
+          </div>
+
+          <div class="flags-section">
+            <h3>Risk Flags (<span id="flags-count">0</span>)</h3>
+            <ul id="flags-list">
+              <!-- Flags rendered here via JS -->
+            </ul>
+          </div>
+
+          <div class="raw-json-section">
+            <button class="toggle-json" id="toggle-json">Show Raw JSON</button>
+            <pre class="json-output hidden" id="json-output"></pre>
+          </div>
+        </section>
+      </div>
+    </section>
+
+    <!-- On-Chain Proof Section -->
+    <section class="proof-section" id="proof-section">
+      <h2>On-Chain Proof Logger</h2>
+      <p>Every evaluation verdict is permanently logged to the <code>GuardianProofLogger</code> smart contract on HashKey Chain testnet.</p>
+      <div class="proof-grid">
+        <div class="proof-card">
+          <span class="proof-label">Contract</span>
+          <a href="https://testnet-explorer.hsk.xyz/address/0x33C38701715be74327B1Bc6EDf9Da81Bfb6800A8" target="_blank" rel="noopener" class="proof-value mono">0x33C387...6800A8</a>
+        </div>
+        <div class="proof-card">
+          <span class="proof-label">Chain</span>
+          <span class="proof-value">HashKey Chain Testnet (133)</span>
+        </div>
+        <div class="proof-card">
+          <span class="proof-label">Evaluations Logged</span>
+          <span class="proof-value highlight">3</span>
+        </div>
+        <div class="proof-card">
+          <span class="proof-label">Architecture</span>
+          <span class="proof-value">Fail-Closed</span>
+        </div>
+      </div>
+      <div class="proof-txs">
+        <h4>Proof Transactions</h4>
+        <a href="https://testnet-explorer.hsk.xyz/tx/0x74a05cf4fffe407f1a0f20bb4afc0a5af98d9e82da1d80b409765cdf993732ca" target="_blank" rel="noopener" class="proof-tx-link">
+          <span class="tx-hash">0x74a05c...732ca</span>
+          <span class="tx-arrow">↗</span>
+        </a>
+        <a href="https://testnet-explorer.hsk.xyz/tx/0x547fffbf06786d1eda3e8061d041f9b200b93662bf65f2facecb49a491025ffa" target="_blank" rel="noopener" class="proof-tx-link">
+          <span class="tx-hash">0x547fff...25ffa</span>
+          <span class="tx-arrow">↗</span>
+        </a>
+        <a href="https://testnet-explorer.hsk.xyz/tx/0xce9f20b40c4ac141a53f1333e6d627e9751cb8e2b8ce2fb65054911a9ff7ed20" target="_blank" rel="noopener" class="proof-tx-link">
+          <span class="tx-hash">0xce9f20...ed20</span>
+          <span class="tx-arrow">↗</span>
+        </a>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+      <div class="footer-inner">
+        <p>&copy; 2026 Guardian Protocol — HashKey Chain Horizon Hackathon · AI Track</p>
+        <div class="footer-links">
+          <a href="https://github.com/bitnormie01/guardian-protocol-hsk" target="_blank" rel="noopener">GitHub</a>
+          <a href="https://testnet-explorer.hsk.xyz/address/0x33C38701715be74327B1Bc6EDf9Da81Bfb6800A8" target="_blank" rel="noopener">Explorer</a>
+        </div>
+      </div>
+    </footer>
   </main>
 
   <script type="module" src="app.js"></script>

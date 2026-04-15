@@ -61,11 +61,16 @@ async function readTokenDecimals(
   rpcClient: HashKeyRPCClient,
   tokenAddress: Address,
 ): Promise<number> {
-  return rpcClient.readContract<number>({
-    address: tokenAddress,
-    abi: ERC20_METADATA_ABI,
-    functionName: "decimals",
-  });
+  try {
+    return await rpcClient.readContract<number>({
+      address: tokenAddress,
+      abi: ERC20_METADATA_ABI,
+      functionName: "decimals",
+    });
+  } catch (err) {
+    logger.warn(`[trade-context] Could not read decimals for ${tokenAddress}, defaulting to 18`);
+    return 18;
+  }
 }
 
 function parseTokenUnitPrice(raw?: string | null): number | null {

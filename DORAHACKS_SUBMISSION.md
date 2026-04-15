@@ -1,6 +1,5 @@
 # DoraHacks BUIDL Submission — Guardian Protocol
 
-> Paste-ready. No placeholders. Copy each section into the DoraHacks form.
 
 ---
 
@@ -65,12 +64,12 @@ Guardian Protocol belongs in the AI Track because its entire output interface is
 
 | Resource | URL |
 |---|---|
-| **GitHub Repository** | https://github.com/ArtificialSapien/Guardian-Protocol |
-| **Deployed Contract** (Testnet) | https://testnet.hashkeyscan.io/address/0x33C38701715be74327B1Bc6EDf9Da81Bfb6800A8 |
-| **Deployment TX** | https://testnet.hashkeyscan.io/tx/0xc14ca6e2ae0531b84b55d3901baec6cd58248c379ad4b47f63d394fdd42417b7 |
-| **Proof TX #1** | https://testnet.hashkeyscan.io/tx/0x74a05cf4fffe407f1a0f20bb4afc0a5af98d9e82da1d80b409765cdf993732ca |
-| **Proof TX #2** | https://testnet.hashkeyscan.io/tx/0x547fffbf06786d1eda3e8061d041f9b200b93662bf65f2facecb49a491025ffa |
-| **Proof TX #3** | https://testnet.hashkeyscan.io/tx/0xce9f20b40c4ac141a53f1333e6d627e9751cb8e2b8ce2fb65054911a9ff7ed20 |
+| **GitHub Repository** | https://github.com/bitnormie01/guardian-protocol-hsk |
+| **Deployed Contract** (Testnet) | https://testnet-explorer.hsk.xyz/address/0x33C38701715be74327B1Bc6EDf9Da81Bfb6800A8 |
+| **Deployment TX** | https://testnet-explorer.hsk.xyz/tx/0xc14ca6e2ae0531b84b55d3901baec6cd58248c379ad4b47f63d394fdd42417b7 |
+| **Proof TX #1** | https://testnet-explorer.hsk.xyz/tx/0x74a05cf4fffe407f1a0f20bb4afc0a5af98d9e82da1d80b409765cdf993732ca |
+| **Proof TX #2** | https://testnet-explorer.hsk.xyz/tx/0x547fffbf06786d1eda3e8061d041f9b200b93662bf65f2facecb49a491025ffa |
+| **Proof TX #3** | https://testnet-explorer.hsk.xyz/tx/0xce9f20b40c4ac141a53f1333e6d627e9751cb8e2b8ce2fb65054911a9ff7ed20 |
 
 ---
 

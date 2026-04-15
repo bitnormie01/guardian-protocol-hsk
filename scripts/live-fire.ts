@@ -54,39 +54,55 @@ interface EvalResult {
   overallScore: number;
 }
 
+// Shared chain definition + clients (created once to avoid nonce races)
+const HSK_TESTNET_CHAIN = {
+  id: CHAIN_ID,
+  name: "HashKey Chain Testnet",
+  nativeCurrency: { name: "HSK", symbol: "HSK", decimals: 18 },
+  rpcUrls: { default: { http: [RPC_URL] } },
+} as const;
+
+const sharedAccount = PRIVATE_KEY ? privateKeyToAccount(PRIVATE_KEY) : null;
+
+const sharedWalletClient = (sharedAccount && PROOF_LOGGER_ADDRESS)
+  ? createWalletClient({
+      account: sharedAccount,
+      chain: HSK_TESTNET_CHAIN,
+      transport: http(RPC_URL),
+    })
+  : null;
+
+const sharedPublicClient = createPublicClient({
+  chain: HSK_TESTNET_CHAIN,
+  transport: http(RPC_URL),
+});
+
 async function logEvaluationOnChain(result: EvalResult): Promise<string | null> {
-  if (!PROOF_LOGGER_ADDRESS || !PRIVATE_KEY) {
+  if (!PROOF_LOGGER_ADDRESS || !sharedWalletClient) {
     console.log("   ⚠️  No PROOF_LOGGER_ADDRESS or PRIVATE_KEY — skipping on-chain log.");
     return null;
   }
 
   try {
-    const account = privateKeyToAccount(PRIVATE_KEY);
-    const chain = {
-      id: CHAIN_ID,
-      name: "HashKey Chain Testnet",
-      nativeCurrency: { name: "HSK", symbol: "HSK", decimals: 18 },
-      rpcUrls: { default: { http: [RPC_URL] } },
-    } as const;
-
-    const walletClient = createWalletClient({
-      account,
-      chain,
-      transport: http(RPC_URL),
-    });
-
     const evalIdBytes32 = keccak256(toHex(result.evaluationId));
 
-    const txHash = await walletClient.writeContract({
+    const txHash = await sharedWalletClient.writeContract({
       address: PROOF_LOGGER_ADDRESS,
       abi: PROOF_LOGGER_ABI,
       functionName: "logEvaluation",
       args: [evalIdBytes32, result.isSafeToExecute, BigInt(result.overallScore)],
     });
 
+    // Wait for TX to be mined before returning — prevents nonce collisions
+    // on subsequent calls.
+    await sharedPublicClient.waitForTransactionReceipt({
+      hash: txHash,
+      timeout: 30_000,
+    });
+
     console.log(`   📝 On-chain proof logged!`);
     console.log(`   TX Hash: ${txHash}`);
-    console.log(`   Explorer: https://testnet.hashkeyscan.io/tx/${txHash}`);
+    console.log(`   Explorer: https://testnet-explorer.hsk.xyz/tx/${txHash}`);
 
     return txHash;
   } catch (err) {
@@ -319,7 +335,7 @@ async function main() {
     console.log(`\n   📝 Proof Transaction Hashes:`);
     for (const hash of proofTxHashes) {
       console.log(`      • ${hash}`);
-      console.log(`        https://testnet.hashkeyscan.io/tx/${hash}`);
+      console.log(`        https://testnet-explorer.hsk.xyz/tx/${hash}`);
     }
   }
 

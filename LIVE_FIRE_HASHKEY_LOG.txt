@@ -114,7 +114,7 @@
 }
    📝 On-chain proof logged!
    TX Hash: 0x74a05cf4fffe407f1a0f20bb4afc0a5af98d9e82da1d80b409765cdf993732ca
-   Explorer: https://testnet.hashkeyscan.io/tx/0x74a05cf4fffe407f1a0f20bb4afc0a5af98d9e82da1d80b409765cdf993732ca
+   Explorer: https://testnet-explorer.hsk.xyz/tx/0x74a05cf4fffe407f1a0f20bb4afc0a5af98d9e82da1d80b409765cdf993732ca
 Sleeping for 2 seconds to respect API rate limits...
 
 ══════════════════════════════════════════════════════════════════════
@@ -151,7 +151,7 @@ Sleeping for 2 seconds to respect API rate limits...
 }
    📝 On-chain proof logged!
    TX Hash: 0x547fffbf06786d1eda3e8061d041f9b200b93662bf65f2facecb49a491025ffa
-   Explorer: https://testnet.hashkeyscan.io/tx/0x547fffbf06786d1eda3e8061d041f9b200b93662bf65f2facecb49a491025ffa
+   Explorer: https://testnet-explorer.hsk.xyz/tx/0x547fffbf06786d1eda3e8061d041f9b200b93662bf65f2facecb49a491025ffa
 Sleeping for 2 seconds to respect API rate limits...
 
 ══════════════════════════════════════════════════════════════════════
@@ -190,7 +190,7 @@ Sleeping for 2 seconds to respect API rate limits...
 🛡️  FAIL-CLOSED VERIFIED: Unknown token correctly blocked.
    📝 On-chain proof logged!
    TX Hash: 0xce9f20b40c4ac141a53f1333e6d627e9751cb8e2b8ce2fb65054911a9ff7ed20
-   Explorer: https://testnet.hashkeyscan.io/tx/0xce9f20b40c4ac141a53f1333e6d627e9751cb8e2b8ce2fb65054911a9ff7ed20
+   Explorer: https://testnet-explorer.hsk.xyz/tx/0xce9f20b40c4ac141a53f1333e6d627e9751cb8e2b8ce2fb65054911a9ff7ed20
 
 ══════════════════════════════════════════════════════════════════════
 📊 LIVE FIRE SUMMARY
@@ -205,10 +205,10 @@ Sleeping for 2 seconds to respect API rate limits...
 
    📝 Proof Transaction Hashes:
       • 0x74a05cf4fffe407f1a0f20bb4afc0a5af98d9e82da1d80b409765cdf993732ca
-        https://testnet.hashkeyscan.io/tx/0x74a05cf4fffe407f1a0f20bb4afc0a5af98d9e82da1d80b409765cdf993732ca
+        https://testnet-explorer.hsk.xyz/tx/0x74a05cf4fffe407f1a0f20bb4afc0a5af98d9e82da1d80b409765cdf993732ca
       • 0x547fffbf06786d1eda3e8061d041f9b200b93662bf65f2facecb49a491025ffa
-        https://testnet.hashkeyscan.io/tx/0x547fffbf06786d1eda3e8061d041f9b200b93662bf65f2facecb49a491025ffa
+        https://testnet-explorer.hsk.xyz/tx/0x547fffbf06786d1eda3e8061d041f9b200b93662bf65f2facecb49a491025ffa
       • 0xce9f20b40c4ac141a53f1333e6d627e9751cb8e2b8ce2fb65054911a9ff7ed20
-        https://testnet.hashkeyscan.io/tx/0xce9f20b40c4ac141a53f1333e6d627e9751cb8e2b8ce2fb65054911a9ff7ed20
+        https://testnet-explorer.hsk.xyz/tx/0xce9f20b40c4ac141a53f1333e6d627e9751cb8e2b8ce2fb65054911a9ff7ed20
 ══════════════════════════════════════════════════════════════════════
 
