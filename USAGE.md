@@ -46,12 +46,12 @@ Every threat category below represents **real money lost by real agents and trad
 ### 🍯 Honeypot Contracts
 The most dangerous DeFi trap. The contract allows you to buy the token, but the sell function is disabled, gated behind a whitelist, or designed to always revert. Your funds are permanently trapped.
 
-**How Guardian catches it:** OKX Security API classifies the contract using bytecode pattern matching and historical transaction analysis. GoPlus Security provides an independent second opinion. If either oracle flags it as a honeypot, the verdict is `CRITICAL` → blocked.
+**How Guardian catches it:** GoPlus Security API classifies the contract using bytecode pattern matching and historical transaction analysis. GoPlus Security provides an independent second opinion. If either oracle flags it as a honeypot, the verdict is `CRITICAL` → blocked.
 
 ### 💸 Predatory Tax Tokens
 "Tax tokens" extract a percentage of every buy and sell. A 25% sell tax means you lose a quarter of your position every time you exit. Legitimate projects cap taxes at 5%. Extraction schemes run 25–90%.
 
-**How Guardian catches it:** Token Risk Analyzer reads buy and sell tax percentages from the OKX API and flags anything above configurable thresholds (default: 10% warning, 30% critical).
+**How Guardian catches it:** Token Risk Analyzer reads buy and sell tax percentages from the GoPlus API and flags anything above configurable thresholds (default: 10% warning, 30% critical).
 
 ### 🔒 Wallet Blacklisting
 The contract owner can call a function to permanently freeze any wallet address, blocking all transfers out. Increasingly common in "rug in slow motion" schemes where the deployer waits until liquidity accumulates before freezing early buyers.
@@ -81,7 +81,7 @@ The pool's reported `sqrtPriceX96` doesn't match the theoretical price implied b
 ### 📡 Unverified Contracts
 No source code verified on the block explorer. You cannot audit what you cannot read. Unverified contracts are a non-starter for any serious trading infrastructure.
 
-**How Guardian catches it:** OKX Security API reports verification status. Unverified → `HIGH` severity flag → score reduction.
+**How Guardian catches it:** GoPlus Security API reports verification status. Unverified → `HIGH` severity flag → score reduction.
 
 ---
 
@@ -95,7 +95,7 @@ Your call ──▶ Guardian Orchestrator
        ┌────────────┼────────────┬────────────┐
        ▼            ▼            ▼            ▼
   Token Risk    TX Sim +     MEV Detect   AMM Pool
-  (OKX + GPS)  Fuzzing      (Private     (On-chain
+  (GoPlus + GPS)  Fuzzing      (Private     (On-chain
                 (8-variant)  Flow)        Tick Reads)
        │            │            │            │
        └────────────┴────────────┴────────────┘
@@ -121,7 +121,7 @@ The result is not a suggestion. `isSafeToExecute: false` means the trade must no
 
 **Requirements:**
 - Node.js ≥ 20.0.0
-- OKX API credentials from [OKX Developer Portal](https://www.okx.com/web3/build/dev-portal) — requires: API Key, Secret Key, Passphrase, Project ID
+- GoPlus API credentials from [GoPlus Labs](https://gopluslabs.io) — requires: API Key, Secret Key, Passphrase, Project ID
 
 **Install:**
 
@@ -138,11 +138,11 @@ npm test
 # Expected: 72/72 tests passing ✅
 ```
 
-**Live fire against X Layer Testnet:**
+**Live fire against HashKey Chain Testnet:**
 
 ```bash
 npm run live-fire
-# Runs 3 end-to-end tests against X Layer Chain ID 195
+# Runs 3 end-to-end tests against HashKey Chain Chain ID 133
 # Outputs structured results to stdout + saves to LIVE_FIRE_LOG.txt
 ```
 
@@ -159,21 +159,21 @@ cp .env.example .env
 Edit `.env`:
 
 ```env
-# ─── REQUIRED: OKX API Credentials ────────────────────────────────────
-# Obtain from: https://www.okx.com/web3/build/dev-portal
+# ─── REQUIRED: GoPlus API Credentials ────────────────────────────────────
+# Obtain from: https://gopluslabs.io
 # All four are required. Missing any one → fail-closed on token scans.
-OKX_API_KEY=your_okx_api_key
-OKX_SECRET_KEY=your_okx_secret_key
-OKX_PASSPHRASE=your_okx_passphrase
-OKX_PROJECT_ID=your_okx_project_id
+GOPLUS_API_KEY=your_goplus_api_key
+# GoPlus free tier - no secret needed
+# GoPlus free tier - no passphrase needed
+# GoPlus free tier - no project ID needed
 
 # ─── RECOMMENDED: RPC Endpoint Redundancy ──────────────────────────────
 # Guardian rotates through these with 500ms timeout each.
 # If endpoint 1 is slow → instantly tries endpoint 2 → then 3.
 # If ALL THREE fail → trade blocked (fail-closed).
-XLAYER_RPC_URL=https://rpc.xlayer.tech
-XLAYER_RPC_URL_2=https://xlayerrpc.okx.com
-XLAYER_RPC_URL_3=https://rpc.xlayer.tech
+HASHKEY_RPC_URL=https://rpc.hashkey-chain.tech
+HASHKEY_RPC_URL_2=https://hashkey.drpc.org
+HASHKEY_RPC_URL_3=https://rpc.hashkey-chain.tech
 
 # ─── OPTIONAL: Thresholds & Tuning ─────────────────────────────────────
 GUARDIAN_SAFETY_THRESHOLD=70           # Score below this → trade blocked (0–100)
@@ -186,13 +186,13 @@ GUARDIAN_RPC_ENDPOINT_TIMEOUT_MS=500   # Per-endpoint failover timeout in ms
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
-| `OKX_API_KEY` | ✅ | — | OKX OnchainOS API key |
-| `OKX_SECRET_KEY` | ✅ | — | HMAC-SHA256 signing secret |
-| `OKX_PASSPHRASE` | ✅ | — | OKX account passphrase |
-| `OKX_PROJECT_ID` | ✅ | — | OKX project identifier |
-| `XLAYER_RPC_URL` | ➖ | `https://rpc.xlayer.tech` | Primary RPC endpoint |
-| `XLAYER_RPC_URL_2` | ➖ | — | Secondary RPC for failover |
-| `XLAYER_RPC_URL_3` | ➖ | — | Tertiary RPC for failover |
+| `GoPlus_API_KEY` | ✅ | — | GoPlus OnchainOS API key |
+| `GoPlus_SECRET_KEY` | ✅ | — | HMAC-SHA256 signing secret |
+| `GoPlus_PASSPHRASE` | ✅ | — | GoPlus account passphrase |
+| `GoPlus_PROJECT_ID` | ✅ | — | GoPlus project identifier |
+| `HASHKEY_RPC_URL` | ➖ | `https://rpc.hashkey-chain.tech` | Primary RPC endpoint |
+| `HASHKEY_RPC_URL_2` | ➖ | — | Secondary RPC for failover |
+| `HASHKEY_RPC_URL_3` | ➖ | — | Tertiary RPC for failover |
 | `GUARDIAN_SAFETY_THRESHOLD` | ➖ | `70` | Minimum score to allow execution |
 | `GUARDIAN_MAX_SLIPPAGE_BPS` | ➖ | `500` | Max acceptable slippage |
 | `GUARDIAN_TX_SIMULATION_TIMEOUT_MS` | ➖ | `10000` | Simulation timeout |
@@ -232,18 +232,18 @@ npx tsx src/cli.ts evaluate <tokenIn> <tokenOut> <amount> [options]
 | Option | Default | Description |
 |--------|---------|-------------|
 | `-u, --user <addr>` | `0x000...001` | Your wallet address |
-| `-c, --chain <id>` | `196` | Chain ID: `196` = mainnet, `195` = testnet |
+| `-c, --chain <id>` | `177` | Chain ID: `177` = mainnet, `133` = testnet |
 | `-t, --tx <hex>` | _(none)_ | Pre-built transaction hex for simulation |
 | `--threshold <score>` | `70` | Override safety threshold (0–100) |
 
-**Example — Is swapping 1 WOKB for USDC on X Layer Mainnet safe?**
+**Example — Is swapping 1 WHSK for USDC on HashKey Chain Mainnet safe?**
 
 ```bash
 npx tsx src/cli.ts evaluate \
   0xe538905cf8410324e03A5A23C1c177a474D59b2b \
   0x1E4a5963aBFD975d8c9021ce480b42188849D41d \
   1000000000000000000 \
-  --chain 196 \
+  --chain 177 \
   --user 0xYourWalletAddress
 ```
 
@@ -253,7 +253,7 @@ npx tsx src/cli.ts evaluate \
 {
   "evaluationId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
   "timestamp": "2026-04-09T13:15:00.000Z",
-  "chainId": 196,
+  "chainId": 177,
   "safetyScore": {
     "overall": 91,
     "tier": "SAFE",
@@ -300,7 +300,7 @@ npx tsx src/cli.ts evaluate \
     {
       "code": "HONEYPOT_DETECTED",
       "severity": "critical",
-      "message": "Token 0x... has been classified as a honeypot by OKX Security API and confirmed by GoPlus Security. The sell function is disabled post-purchase. You will NOT be able to sell this token after buying. Funds will be permanently trapped.",
+      "message": "Token 0x... has been classified as a honeypot by GoPlus Security API and confirmed by GoPlus Security. The sell function is disabled post-purchase. You will NOT be able to sell this token after buying. Funds will be permanently trapped.",
       "source": "token-risk-analyzer"
     }
   ],
@@ -322,12 +322,12 @@ npx tsx src/cli.ts scan-token <tokenAddress> [options]
 
 | Option | Default | Description |
 |--------|---------|-------------|
-| `-c, --chain <id>` | `196` | Chain ID |
+| `-c, --chain <id>` | `177` | Chain ID |
 
 **Example:**
 
 ```bash
-npx tsx src/cli.ts scan-token 0xSomeSuspiciousToken --chain 196
+npx tsx src/cli.ts scan-token 0xSomeSuspiciousToken --chain 177
 ```
 
 **Response — Dangerous Token:**
@@ -375,7 +375,7 @@ npx tsx src/cli.ts simulate-tx <txHex> [options]
 | Option | Default | Description |
 |--------|---------|-------------|
 | `-u, --user <addr>` | `0x000...001` | Sender address |
-| `-c, --chain <id>` | `196` | Chain ID |
+| `-c, --chain <id>` | `177` | Chain ID |
 
 **Example:**
 
@@ -383,7 +383,7 @@ npx tsx src/cli.ts simulate-tx <txHex> [options]
 npx tsx src/cli.ts simulate-tx \
   0x095ea7b30000000000000000000000006b3... \
   --user 0xYourWallet \
-  --chain 196
+  --chain 177
 ```
 
 **Response — Simulation Passed:**
@@ -395,7 +395,7 @@ npx tsx src/cli.ts simulate-tx \
   "gasUsed": "147500",
   "stateChanges": [
     { "address": "0xYourWallet", "tokenAddress": "0xUSDC", "delta": "-100000000" },
-    { "address": "0xYourWallet", "tokenAddress": "0xWOKB", "delta": "+987000000000000000" }
+    { "address": "0xYourWallet", "tokenAddress": "0xWHSK", "delta": "+987000000000000000" }
   ],
   "flags": []
 }
@@ -450,7 +450,7 @@ interface GuardianEvaluationRequest {
   tokenOut:       string;  // Address of the token being bought
   amount:         string;  // Amount of tokenIn in wei (uint256 as string)
   userAddress:    string;  // Caller's wallet address
-  chainId?:       196 | 195;  // X Layer mainnet (196) or testnet (195), default: 196
+  chainId?:       177 | 133;  // HashKey Chain mainnet (177) or testnet (133), default: 177
   proposedTxHex?: string;  // Optional: pre-built tx hex for simulation
   callerAgentId?: string;  // Optional: agent identifier for audit logs
 }
@@ -474,7 +474,7 @@ async function executeGuardedSwap(
     tokenOut,
     amount:      amountWei,
     userAddress: walletAddress,
-    chainId:     196,  // X Layer Mainnet
+    chainId: 177,  // HashKey Chain Mainnet
   });
 
   // ── Step 2: Hard gate. No bypass. No "proceed anyway". ───────────────
@@ -518,7 +518,7 @@ import { scanToken } from "@guardian-protocol/skill";
 
 // Pre-screen a token before constructing any transaction
 async function isTokenTradeable(tokenAddress: string): Promise<boolean> {
-  const scan = await scanToken({ tokenAddress, chainId: 196 });
+  const scan = await scanToken({ tokenAddress, chainId: 177 });
 
   if (!scan.isSafe) {
     console.log(`Token ${tokenAddress} flagged: ${scan.safetyScore.tier}`);
@@ -546,7 +546,7 @@ const tradeable = safe.filter((t) => t.safe).map((t) => t.address);
 
 ### 6.3 `simulateTx()` — Standalone Simulation
 
-Useful when you have a transaction hex from an external source (OKX DEX API, custom router, etc.) and want to validate it before broadcast.
+Useful when you have a transaction hex from an external source (DEX API, custom router, etc.) and want to validate it before broadcast.
 
 **Signature:**
 ```typescript
@@ -559,13 +559,13 @@ async function simulateTx(
 ```typescript
 import { simulateTx } from "@guardian-protocol/skill";
 
-// Build tx from OKX DEX API, then validate before sending
-const dexQuote = await okxDEX.getSwapTx({ ... });
+// Build tx from DEX API, then validate before sending
+const dexQuote = await dex.getSwapTx({ ... });
 
 const sim = await simulateTx({
   proposedTxHex: dexQuote.tx.data,
   userAddress:   walletAddress,
-  chainId:       196,
+  chainId: 177,
 });
 
 if (!sim.simulationSuccess) {
@@ -615,7 +615,7 @@ Every entry in the `flags` array has this shape:
 {
   "code": "HONEYPOT_DETECTED",
   "severity": "critical",
-  "message": "Token 0x1E4a... has been classified as a honeypot by OKX Security API and confirmed by GoPlus Security. The sell function is disabled post-purchase. You will NOT be able to sell this token after buying.",
+  "message": "Token 0x1E4a... has been classified as a honeypot by GoPlus Security API and confirmed by GoPlus Security. The sell function is disabled post-purchase. You will NOT be able to sell this token after buying.",
   "source": "token-risk-analyzer"
 }
 ```
@@ -640,7 +640,7 @@ Every entry in the `flags` array has this shape:
 
 | Flag Code | Severity | Trigger Condition |
 |-----------|----------|-------------------|
-| `HONEYPOT_DETECTED` | 🔴 CRITICAL | OKX API or GoPlus classifies this as a honeypot contract |
+| `HONEYPOT_DETECTED` | 🔴 CRITICAL | GoPlus API or GoPlus classifies this as a honeypot contract |
 | `BLACKLIST_FUNCTION` | 🔴 CRITICAL | Contract ABI includes wallet freezing capability |
 | `HIGH_TAX_TOKEN` | 🟠 HIGH | Buy or sell tax exceeds configured threshold (default: 10% warn, 30% danger) |
 | `MINT_FUNCTION_PRESENT` | 🟠 HIGH | Unlimited mint function present and not renounced |
@@ -681,8 +681,8 @@ The `safetyScore.breakdown` gives you per-analyzer sub-scores:
 
 ```json
 "breakdown": {
-  "tokenRisk":    95,   // 30% weight — OKX + GoPlus dual-oracle verdict
-  "txSimulation": 88,   // 30% weight — eth_call + OKX cross-validation + fuzzing
+  "tokenRisk":    95,   // 30% weight — GoPlus + GoPlus dual-oracle verdict
+  "txSimulation": 88,   // 30% weight — eth_call + GoPlus cross-validation + fuzzing
   "mevRisk":      71,   // 15% weight — mempool + private flow + builder toxicity
   "ammPoolRisk":  92    // 25% weight — on-chain concentrated liquidity state
 }
@@ -734,7 +734,7 @@ async function processOpportunities(
       tokenOut:    opp.tokenOut,
       amount:      opp.amount,
       userAddress: walletAddress,
-      chainId:     196,
+      chainId: 177,
     });
 
     if (!verdict.isSafeToExecute) {
@@ -780,7 +780,7 @@ async function buildSafeWatchlist(
   const results = await Promise.allSettled(
     candidateAddresses.map(async (addr) => ({
       address: addr,
-      scan: await scanToken({ tokenAddress: addr, chainId: 196 }),
+      scan: await scanToken({ tokenAddress: addr, chainId: 177 }),
     }))
   );
 
@@ -822,8 +822,8 @@ async function checkArbitrageOpportunity(
   // ── Phase 1: Fast token pre-screen (< 500ms) ───────────────────────
   // Run both token scans in parallel
   const [scanA, scanB] = await Promise.all([
-    scanToken({ tokenAddress: tokenA, chainId: 196 }),
-    scanToken({ tokenAddress: tokenB, chainId: 196 }),
+    scanToken({ tokenAddress: tokenA, chainId: 177 }),
+    scanToken({ tokenAddress: tokenB, chainId: 177 }),
   ]);
 
   if (!scanA.isSafe || !scanB.isSafe) {
@@ -838,7 +838,7 @@ async function checkArbitrageOpportunity(
     tokenOut:    tokenB,
     amount:      amount,
     userAddress: walletAddress,
-    chainId:     196,
+    chainId: 177,
   });
 
   return verdict.isSafeToExecute;
@@ -868,7 +868,7 @@ async function monitorPortfolioRisk(
 ): Promise<void> {
 
   for (const token of portfolio) {
-    const scan = await scanToken({ tokenAddress: token.address, chainId: 196 });
+    const scan = await scanToken({ tokenAddress: token.address, chainId: 177 });
 
     if (!scan.isSafe) {
       const highFlags = scan.flags.filter(f => f.severity === "critical" || f.severity === "high");
@@ -917,7 +917,7 @@ Agent has a swap opportunity
               │              │              │
               ▼              ▼              ▼
          Token Risk      TX Sim         MEV + AMM
-         (OKX+GPS)      + Fuzzing      Analyzers
+         (GoPlus+GPS)      + Fuzzing      Analyzers
               │              │              │
               └──────────────┴──────────────┘
                              │
@@ -1012,14 +1012,14 @@ const strictConfig: Partial<GuardianConfig> = {
 };
 
 const verdict = await evaluateTrade(
-  { tokenIn, tokenOut, amount, userAddress, chainId: 196 },
+  { tokenIn, tokenOut, amount, userAddress, chainId: 177 },
   strictConfig
 );
 ```
 
 ### Configuration for High-Frequency Agents
 
-If your agent runs at high frequency (many evaluations per minute), the LRU cache already handles OKX API rate limiting. But you should also tune:
+If your agent runs at high frequency (many evaluations per minute), the LRU cache already handles GoPlus API rate limiting. But you should also tune:
 
 ```typescript
 // For high-frequency loops: accept slightly more risk on MEV (mitigable via private mempool)
@@ -1040,9 +1040,9 @@ const hfConfig: Partial<GuardianConfig> = {
 
 ### Errors & Common Issues
 
-**`"OKX_API_KEY is required but not set"`**
+**`"GoPlus_API_KEY is required but not set"`**
 
-Your `.env` file is missing OKX credentials. Follow [Section 4.1](#41-environment-variables). Getting credentials from the [OKX Developer Portal](https://www.okx.com/web3/build/dev-portal) is free.
+Your `.env` file is missing GoPlus credentials. Follow [Section 4.1](#41-environment-variables). Getting credentials from the [GoPlus Labs](https://gopluslabs.io) is free.
 
 After adding credentials, re-run `npm test` — all 72 tests should pass.
 
@@ -1053,7 +1053,7 @@ After adding credentials, re-run `npm test` — all 72 tests should pass.
 All three configured RPCs timed out (500ms each). Guardian blocks the trade (fail-closed). Check:
 1. Internet connectivity
 2. `.env` RPC URL values are correct
-3. X Layer RPC status at https://www.okx.com/xlayer
+3. HashKey Chain RPC status at https://explorer.hsk.xyz
 
 Avoid using the same URL for all three endpoints — the whole point of redundancy is using different servers.
 
@@ -1063,8 +1063,8 @@ Avoid using the same URL for all three endpoints — the whole point of redundan
 
 Score 0 with `UNVERIFIED_CONTRACT` or `HONEYPOT_DETECTED` usually means either:
 
-- Your OKX API credentials are not configured (the API call fails, Guardian fails closed → score 0)
-- The token is too new to be indexed by OKX Security API
+- Your GoPlus API credentials are not configured (the API call fails, Guardian fails closed → score 0)
+- The token is too new to be indexed by GoPlus Security API
 - The token is on a chain not yet fully supported
 
 This is by design. Guardian does not assume safety. If it cannot verify with confidence, it blocks. Configure your credentials correctly and retry.
@@ -1084,7 +1084,7 @@ npx tsc --noEmit
 npx vitest run --reporter=verbose
 
 # If tests pass but live-fire fails, that's a credentials issue — not a code issue
-npm run live-fire  # requires OKX API credentials in .env
+npm run live-fire  # requires GoPlus API credentials in .env
 ```
 
 ---
@@ -1095,16 +1095,16 @@ npm run live-fire  # requires OKX API credentials in .env
 > No. Guardian is 100% read-only. It calls `eth_call` (simulation only), reads contract state, and calls security APIs. It never signs, constructs, or broadcasts any transaction. The signing key never touches Guardian.
 
 **Q: Does Guardian work on mainnet and testnet?**
-> Yes. Use `chainId: 196` for X Layer Mainnet, `chainId: 195` for X Layer Testnet. The OKX Security API and RPC client both support both chain IDs.
+> Yes. Use `chainId: 177` for HashKey Chain Mainnet, `chainId: 133` for HashKey Chain Testnet. The GoPlus Security API and RPC client both support both chain IDs.
 
-**Q: How does guardian handle chains other than X Layer?**
-> Currently, Guardian is optimized and tuned for X Layer (Chain IDs 196/195). The architecture is chain-agnostic in design, but the OKX API integration scope and RPC configuration are X Layer-specific.
+**Q: How does guardian handle chains other than HashKey Chain?**
+> Currently, Guardian is optimized and tuned for HashKey Chain (Chain IDs 177/133). The architecture is chain-agnostic in design, but the GoPlus API integration scope and RPC configuration are HashKey Chain-specific.
 
-**Q: What happens if OKX Security API is down?**
+**Q: What happens if GoPlus Security API is down?**
 > Guardian **blocks the trade** (score 0, `isSafeToExecute: false`). This is the fail-closed contract: uncertain safety = blocked. Your agent should treat this as a temporary outage and retry — not as a signal to proceed anyway.
 
 **Q: Can I use Guardian in production?**
-> Yes. v0.2.1 includes: 3-endpoint RPC redundancy, 8-variant state fuzzing, dual-oracle token scanning, private MEV flow detection, AMM tick analysis, and cross-analyzer penalty cascading. It was explicitly designed for adversarial mainnet conditions. The 72-test suite validates all failure modes. The live fire log shows it running against X Layer Mainnet.
+> Yes. v0.2.1 includes: 3-endpoint RPC redundancy, 8-variant state fuzzing, dual-oracle token scanning, private MEV flow detection, AMM tick analysis, and cross-analyzer penalty cascading. It was explicitly designed for adversarial mainnet conditions. The 72-test suite validates all failure modes. The live fire log shows it running against HashKey Chain Mainnet.
 
 **Q: What's the difference between `evaluate` and `scan-token`?**
 > `evaluate` runs the **full pipeline** (all 4 analyzers: token risk, simulation, MEV, AMM pool) and returns a full verdict with optimized routing meta. `scan-token` runs **only the token risk analyzer** — faster and cheaper, useful for pre-screening before constructing a transaction. If you don't have a transaction hex yet, `scan-token` is the right tool.
@@ -1116,7 +1116,7 @@ npm run live-fire  # requires OKX API credentials in .env
 > The AMM Pool Analyzer reads Uniswap V3-compatible ABI functions (`slot0`, `liquidity`, `ticks`, `tickSpacing`). For traditional constant-product pools (Uniswap V2 style), the pool read will fail gracefully — returning a cautious score of 60 rather than blocking — because the manipulation vectors specific to concentrated liquidity (tick gaps, price deviation) don't apply to constant-product pools.
 
 **Q: What is the `GoPlus Security` integration?**
-> GoPlus Security is a secondary security oracle that provides independent honeypot classification. Guardian's Token Risk Analyzer calls both OKX Security API and GoPlus Security for every token scan, then cross-validates the results. If the two disagree (one says clean, one says honeypot), a penalty is applied. Two independent honeypot confirmations are far more reliable than one.
+> GoPlus Security is a secondary security oracle that provides independent honeypot classification. Guardian's Token Risk Analyzer calls both GoPlus Security API and GoPlus Security for every token scan, then cross-validates the results. If the two disagree (one says clean, one says honeypot), a penalty is applied. Two independent honeypot confirmations are far more reliable than one.
 
 ---
 
@@ -1128,7 +1128,7 @@ npm run live-fire  # requires OKX API credentials in .env
 
 [README](./README.md) · [SKILL.md](./SKILL.md) · [CHANGELOG](./CHANGELOG.md) · [CONTRIBUTING](./CONTRIBUTING.md)
 
-*Built for OKX Build X Hackathon — Skill Arena Track*
+*Built for HashKey Chain Horizon Hackathon — AI Track*
 
 ---
 

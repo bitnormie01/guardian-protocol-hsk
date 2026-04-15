@@ -1,18 +1,18 @@
 import { describe, expect, it, vi } from "vitest";
 import { resolveTradeContext } from "../../../src/services/trade-context.js";
 import type { GuardianEvaluationRequest, Address } from "../../../src/types/input.js";
-import type { OKXDexQuoteData } from "../../../src/types/okx-api.js";
-import type { OKXSecurityClient } from "../../../src/services/okx-security-client.js";
-import type { XLayerRPCClient } from "../../../src/services/xlayer-rpc-client.js";
+import type { DexQuoteData } from "../../../src/types/hashkey-api.js";
+import type { GoPlusSecurityClient } from "../../../src/services/goplus-security-client.js";
+import type { HashKeyRPCClient } from "../../../src/services/hashkey-rpc-client.js";
 
 const TOKEN_IN = "0xe538905cf8410324e03A5A23C1c177a474D59b2b" as Address;
 const TOKEN_OUT = "0x74b7F16337b8972027F6196A17a631aC6dE26d22" as Address;
 const USER = "0x6e9fb08755b837388a36ced22f26ed64240fb29c" as Address;
 const POOL = "0x1111111111111111111111111111111111111111" as Address;
 
-function createQuote(): OKXDexQuoteData {
+function createQuote(): DexQuoteData {
   return {
-    chainIndex: "196",
+    chainIndex: "177",
     swapMode: "exactIn",
     fromTokenAmount: "1000000000000000000",
     toTokenAmount: "4200000",
@@ -25,7 +25,7 @@ function createQuote(): OKXDexQuoteData {
         },
         fromToken: {
           tokenContractAddress: TOKEN_IN,
-          tokenSymbol: "WOKB",
+          tokenSymbol: "WHSK",
           tokenUnitPrice: "52.5",
           decimal: "18",
         },
@@ -52,24 +52,24 @@ describe("resolveTradeContext", () => {
       userAddress: USER,
     };
 
-    const okx = {
+    const goPlus = {
       getDexQuote: vi.fn().mockResolvedValue(createQuote()),
-    } as unknown as OKXSecurityClient;
+    } as unknown as GoPlusSecurityClient;
 
     const rpc = {
       readContract: vi.fn(),
-    } as unknown as XLayerRPCClient;
+    } as unknown as HashKeyRPCClient;
 
-    const context = await resolveTradeContext(request, 196, 500, okx, rpc);
+    const context = await resolveTradeContext(request, 177, 500, goPlus, rpc);
 
-    expect(context.contextSource).toBe("okx-dex");
+    expect(context.contextSource).toBe("dex-api");
     expect(context.hasQuoteData).toBe(true);
     expect(context.poolAddress).toBe(POOL);
     expect(context.tokenInDecimals).toBe(18);
     expect(context.tokenOutDecimals).toBe(6);
     expect(context.estimatedTradeUsd).toBe(52.5);
     expect(context.expectedOutputRaw).toBe(4200000n);
-    expect(context.optimizedRouting?.aggregator).toBe("OKX DEX API");
+    expect(context.optimizedRouting?.aggregator).toBe("DEX API");
     expect(context.optimizedRouting?.expectedOutputAmount).toBe("4.2");
     expect(context.optimizedRouting?.path[0]?.protocol).toBe("Uniswap V3");
   });
@@ -85,9 +85,9 @@ describe("resolveTradeContext", () => {
       userAddress: USER,
     };
 
-    const okx = {
+    const goPlus = {
       getDexQuote: vi.fn().mockRejectedValue(new Error("rate limited")),
-    } as unknown as OKXSecurityClient;
+    } as unknown as GoPlusSecurityClient;
 
     const rpc = {
       readContract: vi.fn().mockImplementation(async (args: {
@@ -107,9 +107,9 @@ describe("resolveTradeContext", () => {
 
         throw new Error(`Unexpected readContract call: ${args.functionName}`);
       }),
-    } as unknown as XLayerRPCClient;
+    } as unknown as HashKeyRPCClient;
 
-    const context = await resolveTradeContext(request, 196, 500, okx, rpc);
+    const context = await resolveTradeContext(request, 177, 500, goPlus, rpc);
 
     expect(context.contextSource).toBe("fallback");
     expect(context.hasQuoteData).toBe(false);

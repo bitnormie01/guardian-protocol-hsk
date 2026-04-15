@@ -10,15 +10,9 @@ const GUARDIAN_PROOF_LOGGER_ABI = [
     name: "logEvaluation",
     stateMutability: "nonpayable",
     inputs: [
-      { name: "evaluationHash", type: "bytes32" },
-      { name: "user", type: "address" },
-      { name: "tokenIn", type: "address" },
-      { name: "tokenOut", type: "address" },
-      { name: "amountRaw", type: "uint256" },
+      { name: "evaluationId", type: "bytes32" },
+      { name: "verdict", type: "bool" },
       { name: "score", type: "uint256" },
-      { name: "isSafeToExecute", type: "bool" },
-      { name: "contextSource", type: "string" },
-      { name: "metadataURI", type: "string" },
     ],
     outputs: [],
   },
@@ -59,28 +53,16 @@ const program = new Command();
 program
   .requiredOption("--contract <address>")
   .requiredOption("--evaluation-id <id>")
-  .requiredOption("--user <address>")
-  .requiredOption("--token-in <address>")
-  .requiredOption("--token-out <address>")
-  .requiredOption("--amount-raw <amountRaw>")
   .requiredOption("--score <score>")
   .requiredOption("--safe <true|false>")
-  .option("--context-source <contextSource>", "Context source", "okx-dex")
-  .option("--metadata-uri <metadataURI>", "Metadata URI", "")
-  .option("--chain <chainId>", "Chain ID", "196");
+  .option("--chain <chainId>", "Chain ID", "133");
 
 program.parse();
 const options = program.opts<{
   contract: Address;
   evaluationId: string;
-  user: Address;
-  tokenIn: Address;
-  tokenOut: Address;
-  amountRaw: string;
   score: string;
   safe: string;
-  contextSource: string;
-  metadataUri: string;
   chain: string;
 }>();
 
@@ -90,14 +72,8 @@ const inputData = encodeFunctionData({
   functionName: "logEvaluation",
   args: [
     evaluationHash,
-    options.user,
-    options.tokenIn,
-    options.tokenOut,
-    BigInt(options.amountRaw),
-    BigInt(options.score),
     options.safe === "true",
-    options.contextSource,
-    options.metadataUri,
+    BigInt(options.score),
   ],
 });
 

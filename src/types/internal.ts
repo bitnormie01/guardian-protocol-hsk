@@ -33,7 +33,7 @@ export interface ResolvedTradeContext extends AnalysisContext {
   targetAddress: Address | null;
   poolAddress: Address | null;
   optimizedRouting: OptimizedRouting | null;
-  contextSource: "caller" | "okx-dex" | "fallback";
+  contextSource: "caller" | "dex-api" | "fallback";
   hasQuoteData: boolean;
 }
 

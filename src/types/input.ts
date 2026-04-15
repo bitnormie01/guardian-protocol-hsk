@@ -5,9 +5,9 @@
 
 /**
  * Supported chain IDs for Guardian Protocol.
- * X Layer mainnet = 196, X Layer testnet = 195.
+ * HashKey Chain mainnet = 177, HashKey Chain testnet = 133.
  */
-export type SupportedChainId = 196 | 195;
+export type SupportedChainId = 177 | 133;
 
 /**
  * EVM hex-encoded address (checksummed or lowercase).
@@ -40,7 +40,7 @@ export interface QuoteContext {
    */
   routerAddress?: Address;
 
-  /** Human-readable source for auditability (e.g. "okx-dex-quote"). */
+  /** Human-readable source for auditability (e.g. "dex-quote"). */
   routeSource?: string;
 }
 
@@ -99,7 +99,7 @@ export interface GuardianEvaluationRequest {
    */
   proposedTxTarget?: Address;
 
-  /** Chain ID — defaults to 196 (X Layer mainnet). */
+  /** Chain ID — defaults to 177 (HashKey Chain mainnet). */
   chainId?: SupportedChainId;
 
   /**
@@ -133,7 +133,7 @@ export interface TokenScanRequest {
   /** The token contract address to scan. */
   tokenAddress: Address;
 
-  /** Chain ID — defaults to 196 (X Layer mainnet). */
+  /** Chain ID — defaults to 177 (HashKey Chain mainnet). */
   chainId?: SupportedChainId;
 }
 
@@ -150,6 +150,6 @@ export interface TxSimulationRequest {
   /** The destination contract address. */
   targetAddress?: Address;
 
-  /** Chain ID — defaults to 196 (X Layer mainnet). */
+  /** Chain ID — defaults to 177 (HashKey Chain mainnet). */
   chainId?: SupportedChainId;
 }

@@ -3,8 +3,8 @@
 // ==========================================================================
 //
 // This is the FIRST line of defense for any autonomous agent attempting
-// a swap on X Layer. Before an agent spends a single wei of gas, this
-// analyzer answers the question:
+// a swap on HashKey Chain. Before an agent spends a single wei of gas,
+// this analyzer answers the question:
 //
 //   "Is this token contract safe to interact with?"
 //
@@ -14,8 +14,8 @@
 // │  1. HONEYPOT DETECTION                                              │
 // │     A honeypot token allows buying but blocks selling — the most    │
 // │     common scam on EVM chains. If an agent buys a honeypot, those   │
-// │     funds are gone forever. We check the OKX Security API's         │
-// │     `isHoneypot` flag, which tests actual sell-path execution.      │
+// │     funds are gone forever. We check GoPlus Security API's          │
+// │     `is_honeypot` flag, which tests actual sell-path execution.     │
 // │                                                                     │
 // │  2. TAX ANALYSIS                                                    │
 // │     Some tokens impose hidden buy/sell taxes (sometimes 50–99%).    │
@@ -49,9 +49,9 @@
 //   feeds into the risk scoring engine at `src/scoring/risk-engine.ts`.
 //
 // DATA SOURCE:
-//   OKX OnchainOS Security API — the same backend that the `okx-security`
-//   skill uses for token risk scanning, phishing detection, and approval
-//   management. We call it via our typed `OKXSecurityClient`.
+//   GoPlus Security API — the PRIMARY security oracle for HashKey Chain.
+//   We call it via our typed `GoPlusSecurityClient` (aliased as
+//   GoPlusSecurityClient for backward compatibility).
 //
 // ==========================================================================
 
@@ -59,15 +59,19 @@ import type { Address, SupportedChainId } from "../types/input.js";
 import type { AnalyzerResult } from "../types/internal.js";
 import type { RiskFlag } from "../types/output.js";
 import { RiskFlagCode } from "../types/output.js";
-import type { OKXTokenSecurityData } from "../types/okx-api.js";
-import { OKXSecurityClient } from "../services/okx-security-client.js";
+import type { TokenSecurityData } from "../types/hashkey-api.js";
+import { GoPlusSecurityClient } from "../services/goplus-security-client.js";
+import {
+  fetchHashKeyTokenFallback,
+  computeDisagreementPenalty,
+} from "../services/hashkey-token-fallback.js";
 import {
   fetchGoPlusTokenSecurity,
   buildRiskReasons,
 } from "../services/goplus-enrichment.js";
 import { GuardianError, ErrorCode } from "../utils/errors.js";
 import { logger } from "../utils/logger.js";
-import { XLayerRPCClient } from "../services/xlayer-rpc-client.js";
+import { HashKeyRPCClient } from "../services/hashkey-rpc-client.js";
 
 // ---------------------------------------------------------------------------
 // Configurable Thresholds
@@ -135,7 +139,7 @@ export interface TokenRiskReport {
 
   // ---- Fatal signals (any one = do not touch) ----
 
-  /** True if OKX Security API flags this as a risk token. */
+  /** True if GoPlus Security API flags this as a risk token. */
   isRiskToken: boolean;
 
   /** True if confirmed as a honeypot (buying allowed, selling blocked). */
@@ -184,14 +188,14 @@ export interface TokenRiskReport {
 // ---------------------------------------------------------------------------
 
 /**
- * Analyzes the raw OKX security data and produces a list of risk flags.
+ * Analyzes the raw GoPlus security data and produces a list of risk flags.
  *
  * This is the core intelligence of the token risk analyzer. Each check
  * is independent and contributes flags with appropriate severity levels.
  * The flags are ordered: fatals first, then descending severity.
  */
 async function buildRiskFlags(
-  data: OKXTokenSecurityData,
+  data: TokenSecurityData,
   thresholds: TokenRiskThresholds,
 ): Promise<RiskFlag[]> {
   const flags: RiskFlag[] = [];
@@ -199,7 +203,7 @@ async function buildRiskFlags(
 
   // ====================================================================
   // SECTION 1 — FATAL CHECKS
-  // We first check granular OKX v6 boolean fields. Only if isRiskToken
+  // We first check granular GoPlus isRiskTokenv6 boolean fields. Only if isRiskToken
   // is true but no granular reason is found do we fall back to GoPlus.
   // ====================================================================
 
@@ -230,8 +234,8 @@ async function buildRiskFlags(
     });
   }
 
-  // Fallback: OKX flagged as risk but no granular boolean explains why.
-  // Use GoPlus Security API for secondary enrichment.
+  // Fallback: GoPlus flagged as risk but no granular boolean explains why.
+  // Use GoPlus enrichment module for secondary detail extraction.
   if (data.isRiskToken && !fatalDetectedDirectly) {
     const chainId = parseInt(data.chainId, 10);
     const goPlusData = await fetchGoPlusTokenSecurity(
@@ -273,19 +277,19 @@ async function buildRiskFlags(
           code: RiskFlagCode.HONEYPOT_DETECTED,
           severity: "critical",
           message:
-            `FATAL: Token ${data.tokenAddress} is flagged as a risk token by OKX OnchainOS ` +
+            `FATAL: Token ${data.tokenAddress} is flagged as a risk token by GoPlus Security ` +
             `but the specific vulnerability could not be identified via secondary analysis. ` +
             `The token is treated as UNSAFE. DO NOT EXECUTE THIS TRADE.`,
           source: "token-risk-analyzer",
         });
       }
     } else {
-      // GoPlus unavailable — fall back to generic OKX flag.
+      // GoPlus enrichment unavailable — fall back to generic risk flag.
       flags.push({
         code: RiskFlagCode.HONEYPOT_DETECTED,
         severity: "critical",
         message:
-          `FATAL: Token ${data.tokenAddress} is flagged as a risk token by OKX OnchainOS. ` +
+          `FATAL: Token ${data.tokenAddress} is flagged as a risk token by GoPlus Security. ` +
           `Detailed risk analysis is unavailable. Possible threats include honeypot, ` +
           `blacklist function, or malicious contract behavior. ` +
           `DO NOT EXECUTE THIS TRADE.`,
@@ -460,7 +464,7 @@ async function buildRiskFlags(
  *   feeds into the composite SafetyScore in the risk engine.
  */
 function computeTokenRiskScore(
-  data: OKXTokenSecurityData,
+  data: TokenSecurityData,
   flags: RiskFlag[],
 ): number {
   // Immediate zero for fatal conditions — no partial credit
@@ -511,7 +515,7 @@ function computeTokenRiskScore(
  * The primary entry point for token risk analysis.
  *
  * This function:
- *   1. Calls the OKX Security API to fetch raw token risk data
+ *   1. Calls the GoPlus Security API to fetch raw token risk data
  *   2. Evaluates every risk dimension against configurable thresholds
  *   3. Produces structured risk flags with human-readable explanations
  *   4. Computes a 0–100 sub-score for the scoring engine
@@ -523,18 +527,18 @@ function computeTokenRiskScore(
  *   isSafeToExecute: false and the calling agent aborts the trade.
  *
  * @param tokenAddress  - EVM token contract address to scan
- * @param chainId       - X Layer chain ID (196 mainnet, 195 testnet)
+ * @param chainId       - HashKey Chain ID (177 mainnet, 133 testnet)
  * @param thresholds    - Optional custom thresholds (overrides defaults)
- * @param client        - Optional pre-configured OKX client (for testing/DI)
+ * @param client        - Optional pre-configured GoPlus client (for testing/DI)
  *
  * @returns AnalyzerResult conforming to the Guardian pipeline interface,
  *          with `data` containing the full `TokenRiskReport`.
  */
 export async function analyzeTokenRisk(
   tokenAddress: Address,
-  chainId: SupportedChainId = 196,
+  chainId: SupportedChainId = 177,
   thresholds: Partial<TokenRiskThresholds> = {},
-  client?: OKXSecurityClient,
+  client?: GoPlusSecurityClient,
 ): Promise<AnalyzerResult> {
   const ANALYZER_NAME = "token-risk-analyzer";
   const startTime = performance.now();
@@ -550,14 +554,14 @@ export async function analyzeTokenRisk(
     // ------------------------------------------------------------------
     // Step 0: Verify the address is actually a contract
     // ------------------------------------------------------------------
-    const rpcClient = new XLayerRPCClient(chainId);
+    const rpcClient = new HashKeyRPCClient(chainId);
     
     let bytecode: string | null = null;
     try {
-      bytecode = await rpcClient.getRPCManager().execute(
+      bytecode = (await rpcClient.getRPCManager().execute(
         (client) => client.getBytecode({ address: tokenAddress as `0x${string}` }),
         "getBytecode"
-      );
+      )) ?? null;
     } catch (err) {
       logger.warn(`[${ANALYZER_NAME}] Failed to read bytecode, treating as non-contract`, {
         tokenAddress,
@@ -604,12 +608,12 @@ export async function analyzeTokenRisk(
     });
 
     // ------------------------------------------------------------------
-    // Step 1: Fetch raw security data from OKX
+    // Step 1: Fetch raw security data from GoPlus
     // ------------------------------------------------------------------
-    const okxClient = client ?? new OKXSecurityClient();
-    const rawData = await okxClient.scanTokenRisk(tokenAddress, chainId);
+    const goPlusClient = client ?? new GoPlusSecurityClient();
+    const rawData = await goPlusClient.scanTokenRisk(tokenAddress, chainId);
 
-    logger.debug(`[${ANALYZER_NAME}] Received OKX security data`, {
+    logger.debug(`[${ANALYZER_NAME}] Received GoPlus security data`, {
       tokenAddress: rawData.tokenAddress,
       isRiskToken: rawData.isRiskToken,
       buyTaxes: rawData.buyTaxes,
@@ -704,7 +708,7 @@ export async function analyzeTokenRisk(
     // ------------------------------------------------------------------
     // Error Handling
     // ------------------------------------------------------------------
-    // If the OKX API is down or the token isn't indexed, we do NOT
+    // If the GoPlus API is down or the token isn't indexed, we do NOT
     // silently pass. Failing open (assuming safe) would defeat the
     // entire purpose of a security middleware. Instead, we return a
     // score of 0 with an error flag, forcing the calling agent to
@@ -781,9 +785,9 @@ export async function analyzeTokenRisk(
 export async function analyzeTokenPairRisk(
   tokenIn: Address,
   tokenOut: Address,
-  chainId: SupportedChainId = 196,
+  chainId: SupportedChainId = 177,
   thresholds: Partial<TokenRiskThresholds> = {},
-  client?: OKXSecurityClient,
+  client?: GoPlusSecurityClient,
 ): Promise<[AnalyzerResult, AnalyzerResult]> {
   logger.info("Analyzing token pair risk in parallel", {
     tokenIn,

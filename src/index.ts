@@ -43,7 +43,7 @@
 // PERFORMANCE:
 //   All three analyzers run IN PARALLEL via Promise.allSettled().
 //   A typical evaluation completes in 500–2000ms depending on
-//   X Layer RPC and OKX API latency.
+//   HashKey Chain RPC and GoPlus API latency.
 //
 // FAULT TOLERANCE:
 //   Individual analyzer failures are caught and recorded. The scoring
@@ -172,7 +172,7 @@ export async function evaluateTrade(
   const evaluationId = uuidv4();
   const pipelineStart = performance.now();
   const resolvedConfig = createConfig(config);
-  const chainId: SupportedChainId = request.chainId ?? 196;
+  const chainId: SupportedChainId = request.chainId ?? 177;
 
   logger.info("[orchestrator] ═══════════════════════════════════════════");
   logger.info("[orchestrator] Guardian Protocol evaluation STARTED", {
@@ -456,7 +456,7 @@ export async function scanToken(
   const evaluationId = uuidv4();
   const startTime = performance.now();
   const resolvedConfig = createConfig(config);
-  const chainId: SupportedChainId = request.chainId ?? 196;
+  const chainId: SupportedChainId = request.chainId ?? 177;
 
   logger.info("[orchestrator] Token scan requested", {
     evaluationId,
@@ -512,7 +512,7 @@ export async function simulateTx(
 ): Promise<TxSimulationResponse> {
   const evaluationId = uuidv4();
   const resolvedConfig = createConfig(config);
-  const chainId: SupportedChainId = request.chainId ?? 196;
+  const chainId: SupportedChainId = request.chainId ?? 177;
 
   logger.info("[orchestrator] Standalone TX simulation requested", {
     evaluationId,

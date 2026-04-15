@@ -6,7 +6,7 @@
 // │  WHY THIS ANALYZER EXISTS                                           │
 // │                                                                     │
 // │  Concentrated liquidity DEXs (Uniswap V3, and equivalents on       │
-// │  X Layer) are mathematically complex. Unlike Uniswap V2 constant   │
+// │  HashKey Chain) are mathematically complex. Unlike Uniswap V2       │
 // │  product pools (x * y = k), concentrated liquidity pools allow     │
 // │  liquidity providers to concentrate their assets within specific    │
 // │  price ranges (ticks). This creates opportunities for:             │
@@ -43,7 +43,7 @@ import type { Address, SupportedChainId } from "../types/input.js";
 import type { AnalyzerResult } from "../types/internal.js";
 import type { RiskFlag, RiskSeverity } from "../types/output.js";
 import { RiskFlagCode } from "../types/output.js";
-import { XLayerRPCClient } from "../services/xlayer-rpc-client.js";
+import { HashKeyRPCClient } from "../services/hashkey-rpc-client.js";
 import { enrichWithUniswapAI, type UniswapPoolEnrichment } from "../services/uniswap-ai-enrichment.js";
 import { logger } from "../utils/logger.js";
 import { ErrorCode } from "../utils/errors.js";
@@ -56,7 +56,7 @@ import { parseAbi } from "viem";
 /**
  * Minimal ABI for reading concentrated liquidity pool state.
  * Compatible with Uniswap V3, SushiSwap V3, PancakeSwap V3,
- * and any fork deployed on X Layer.
+ * and any fork deployed on HashKey Chain.
  */
 const CONCENTRATED_POOL_ABI = parseAbi([
   // slot0: returns current price, tick, and observation data
@@ -230,7 +230,7 @@ function createFlag(
  * All reads are pinned to the same block number for consistency.
  */
 async function readConcentratedLiquidityState(
-  rpcClient: XLayerRPCClient,
+  rpcClient: HashKeyRPCClient,
   poolAddress: Address,
   scanRange: number = 20,
 ): Promise<ConcentratedPoolState> {
@@ -648,16 +648,16 @@ function computeAMMPoolScore(flags: RiskFlag[]): number {
  *
  * @param poolAddress      - The concentrated liquidity pool contract address
  * @param tradeAmountUsd   - The trade size in USD (for liquidity depth comparison)
- * @param chainId          - X Layer chain ID
+ * @param chainId          - HashKey Chain ID
  * @param config           - Optional custom thresholds
  * @param rpcClient        - Optional pre-configured RPC client (for DI)
  */
 export async function analyzeAMMPoolRisk(
   poolAddress: Address,
   tradeAmountUsd: number,
-  chainId: SupportedChainId = 196,
+  chainId: SupportedChainId = 177,
   config: Partial<AMMPoolAnalyzerConfig> = {},
-  rpcClient?: XLayerRPCClient,
+  rpcClient?: HashKeyRPCClient,
 ): Promise<AnalyzerResult> {
   const ANALYZER_NAME = "amm-pool-analyzer";
   const startTime = performance.now();
@@ -672,7 +672,7 @@ export async function analyzeAMMPoolRisk(
   });
 
   try {
-    const rpc = rpcClient ?? new XLayerRPCClient(chainId);
+    const rpc = rpcClient ?? new HashKeyRPCClient(chainId);
 
     // ------------------------------------------------------------------
     // Step 1: Read pool state

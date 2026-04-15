@@ -5,7 +5,7 @@ This directory is reserved for the **Guardian Optimized Routing** module, schedu
 ## What Will Go Here
 
 When implemented, this module will:
-1. Query the OKX DEX API for swap routes across available X Layer liquidity pools
+1. Query the DEX API for swap routes across available HashKey Chain liquidity pools
 2. Filter routes through Guardian's security pipeline (no routing through flagged pools)
 3. Return the safest route that meets the agent's slippage requirements
 4. Populate `optimizedRouting` in the `GuardianEvaluationResponse` (currently `null`)
@@ -20,4 +20,4 @@ The field is reserved and typed in the output schema so agents integrating now w
 
 - **Phase 1 (v0.1.0):** Core 3-analyzer pipeline, scoring engine, CLI
 - **Phase 2 (v0.2.1):** AMM pool analyzer, RPC redundancy, TX fuzzing, MEV upgrades ✅
-- **Phase 3 (planned):** Optimized routing — OKX DEX integration for safe route selection
+- **Phase 3 (planned):** Optimized routing — DEX integration for safe route selection

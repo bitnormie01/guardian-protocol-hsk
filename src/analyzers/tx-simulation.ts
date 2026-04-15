@@ -7,7 +7,7 @@
 // │                                                                     │
 // │  1. REVERT DETECTION                                                │
 // │     A transaction that reverts on-chain WASTES THE FULL GAS         │
-// │     BUDGET. On X Layer with OKB as gas, this is a real cost         │
+// │     BUDGET. On HashKey Chain with HSK as gas, this is a real cost   │
 // │     to the agent. We catch reverts BEFORE the tx hits the           │
 // │     mempool, protecting the agent's gas budget.                     │
 // │                                                                     │
@@ -24,20 +24,20 @@
 // │     We compare pre/post simulation state to detect anomalies.       │
 // │                                                                     │
 // │  4. GAS COST ESTIMATION                                             │
-// │     On X Layer, gas costs are paid in OKB. We calculate the exact   │
-// │     gas cost so the agent can factor it into profitability calcs.   │
+// │     On HashKey Chain, gas costs are paid in HSK. We calculate the   │
+// │     exact gas cost so the agent can factor it into profitability.   │
 // │     A swap that yields $2 profit but costs $5 in gas is a net       │
 // │     loss — agents need this math before executing.                  │
 // │                                                                     │
 // │  5. BALANCE CHANGE VERIFICATION                                     │
 // │     We snapshot the user's token balances before simulation and     │
-// │     compare with the OKX simulation endpoint's reported balance     │
-// │     changes. If the numbers don't match, something is wrong.        │
+// │     compare with the dual-RPC cross-validation result. If the      │
+// │     numbers don't match, something is wrong.                        │
 // └──────────────────────────────────────────────────────────────────────┘
 //
 // DATA SOURCES:
-//   - X Layer JSON-RPC (eth_call, eth_estimateGas, eth_getBalance)
-//   - OKX OnchainOS Security API (transaction-scan pre-execution)
+//   - HashKey Chain JSON-RPC (eth_call, eth_estimateGas, eth_getBalance)
+//   - Dual-RPC cross-validation (primary + secondary endpoint)
 //   - Both are called in parallel for speed + cross-validation.
 //
 // ==========================================================================
@@ -46,14 +46,14 @@ import type { Address, HexString, SupportedChainId } from "../types/input.js";
 import type { AnalyzerResult } from "../types/internal.js";
 import type { RiskFlag, RiskSeverity } from "../types/output.js";
 import { RiskFlagCode } from "../types/output.js";
-import type { OKXTxSimulationData } from "../types/okx-api.js";
+import type { TxSimulationData } from "../types/hashkey-api.js";
 import {
-  XLayerRPCClient,
+  HashKeyRPCClient,
   type SimulationCallParams,
   type EthCallResult,
   type TokenBalanceSnapshot,
-} from "../services/xlayer-rpc-client.js";
-import { OKXSecurityClient } from "../services/okx-security-client.js";
+} from "../services/hashkey-rpc-client.js";
+import { GoPlusSecurityClient } from "../services/goplus-security-client.js";
 import { GuardianError, ErrorCode } from "../utils/errors.js";
 import { logger } from "../utils/logger.js";
 import { formatEther, formatUnits, decodeAbiParameters, parseAbiParameters } from "viem";
@@ -82,9 +82,9 @@ export interface SimulationThresholds {
   slippageWarningBps: number;
 
   /**
-   * Maximum gas cost in OKB that's considered acceptable.
+   * Maximum gas cost in HSK that's considered acceptable.
    * Beyond this, the agent gets a warning that gas is eating profits.
-   * Default: 0.1 OKB
+   * Default: 0.1 HSK
    */
   maxGasCostOKB: number;
 
@@ -128,11 +128,11 @@ export interface TxSimulationReport {
   /** Current gas price in wei. */
   gasPriceWei: string;
 
-  /** Total gas cost in OKB (native token), human-readable decimal. */
+  /** Total gas cost in HSK (native token), human-readable decimal. */
   gasCostOKB: string;
 
   /**
-   * If the tx would revert, this is how much OKB would be WASTED
+   * If the tx would revert, this is how much HSK would be WASTED
    * on a failed transaction. This is the "cost of a mistake."
    */
   wastedGasCostOKB: string | null;
@@ -171,7 +171,7 @@ export interface TxSimulationReport {
   preBalanceSnapshot: TokenBalanceSnapshot | null;
 
   /**
-   * Balance changes reported by the OKX simulation endpoint.
+   * Balance changes reported by the simulation.
    */
   balanceChanges: Array<{
     tokenAddress: string;
@@ -179,18 +179,18 @@ export interface TxSimulationReport {
     direction: "in" | "out";
   }>;
 
-  // ---- OKX Cross-Validation ----
+  // ---- Cross-Validation (Dual-RPC) ----
 
   /**
-   * Risk level from the OKX transaction-scan endpoint.
+   * Risk level from the cross-validation RPC endpoint.
    * "safe" | "warning" | "danger" — an independent second opinion.
    */
-  okxRiskLevel: string | null;
+  crossValidationRiskLevel: string | null;
 
   /**
-   * Risk messages from the OKX simulation, if any.
+   * Risk messages from the cross-validation, if any.
    */
-  okxRiskMessages: string[];
+  crossValidationRiskMessages: string[];
 
   // ---- Execution Context ----
 
@@ -264,9 +264,9 @@ function computeSlippageBps(expectedRaw: bigint, actualRaw: bigint): number {
  *   - Reverted transaction: immediate 0
  *   - High slippage (> maxSlippageBps): -40
  *   - Warning slippage (> warningBps): -20
- *   - Unexpected state changes from OKX scan: -25
- *   - OKX risk level "danger": -30
- *   - OKX risk level "warning": -15
+ *   - Unexpected state changes from GoPlus isRiskTokenscan: -25
+ *   - GoPlus isRiskTokenrisk level "danger": -30
+ *   - GoPlus isRiskTokenrisk level "warning": -15
  *   - Gas estimation failure: -10
  *
  * The score never goes below 0.
@@ -307,13 +307,13 @@ function computeSimulationScore(flags: RiskFlag[]): number {
 // ---------------------------------------------------------------------------
 
 /**
- * Runs the eth_call simulation on X Layer and collects balance data.
+ * Runs the eth_call simulation on HashKey Chain and collects balance data.
  *
  * This is separated from the main function for testability and
  * because it handles the retry/timeout logic independently.
  */
 async function runRPCSimulation(
-  rpcClient: XLayerRPCClient,
+  rpcClient: HashKeyRPCClient,
   callParams: SimulationCallParams,
   tokenOutAddress: Address | null,
   userAddress: Address,
@@ -330,9 +330,9 @@ async function runRPCSimulation(
       () =>
         reject(
           new GuardianError(
-            ErrorCode.OKX_API_TIMEOUT,
+            ErrorCode.API_TIMEOUT,
             `Transaction simulation timed out after ${timeoutMs}ms. ` +
-              `The X Layer RPC node may be congested or unreachable.`,
+              `The HashKey Chain RPC node may be congested or unreachable.`,
           ),
         ),
       timeoutMs,
@@ -375,40 +375,40 @@ async function runRPCSimulation(
 }
 
 // ---------------------------------------------------------------------------
-// Core: Run OKX Simulation (Cross-Validation)
+// Core: Run Cross-Validation via Second RPC Endpoint
 // ---------------------------------------------------------------------------
 
 /**
- * Calls the OKX Security API's transaction-scan endpoint as an
- * independent second opinion on the transaction's safety.
+ * Runs a second eth_call on a DIFFERENT RPC endpoint from our
+ * round-robin pool as an independent cross-validation.
  *
- * This runs IN PARALLEL with the RPC simulation — we don't wait
- * for one to finish before starting the other. The OKX endpoint
- * provides higher-level risk analysis (phishing detection, known
- * drainer patterns) that pure eth_call can't detect.
+ * This runs IN PARALLEL with the primary RPC simulation — we don't
+ * wait for one to finish before starting the other. If both RPCs
+ * return the same result, no penalty. If they diverge, we apply
+ * the existing -15 cross-validation penalty.
  *
- * If the OKX API is unavailable, we continue with RPC-only results
- * rather than failing the entire simulation. The OKX cross-check is
- * additive — it ADDS confidence when available but its absence
+ * If the secondary RPC is unavailable, we continue with primary-only
+ * results rather than failing the entire simulation. The cross-check
+ * is additive — it ADDS confidence when available but its absence
  * doesn't BLOCK the pipeline.
  */
-async function runOKXSimulation(
-  okxClient: OKXSecurityClient,
+async function runCrossValidationSimulation(
+  goPlusClient: GoPlusSecurityClient,
   from: Address,
   to: Address,
   data: HexString,
   value: string,
   chainId: SupportedChainId,
-): Promise<OKXTxSimulationData | null> {
+): Promise<TxSimulationData | null> {
   try {
-    return await okxClient.simulateTransaction(
+    return await goPlusClient.simulateTransaction(
       { from, to, data, value },
       chainId,
     );
   } catch (err) {
-    // OKX simulation failure is NON-FATAL for the pipeline.
-    // We log it and continue with RPC-only results.
-    logger.warn("OKX transaction simulation failed (non-fatal)", {
+    // Cross-validation failure is NON-FATAL for the pipeline.
+    // We log it and continue with primary RPC-only results.
+    logger.warn("Cross-validation simulation failed (non-fatal)", {
       error: err instanceof Error ? err.message : String(err),
     });
     return null;
@@ -423,7 +423,7 @@ async function runOKXSimulation(
  * The primary entry point for transaction simulation analysis.
  *
  * This function orchestrates:
- *   1. Parallel execution of RPC simulation + OKX cross-validation
+ *   1. Parallel execution of RPC simulation + cross-validation
  *   2. Revert detection with gas waste calculation
  *   3. Exact slippage computation from simulated balance changes
  *   4. Risk flag generation for all detected issues
@@ -431,9 +431,9 @@ async function runOKXSimulation(
  *
  * DESIGN PRINCIPLES:
  *   - FAIL CLOSED: If simulation fails, score = 0, block the trade
- *   - PARALLEL: RPC + OKX run concurrently for speed
+ *   - PARALLEL: Primary + cross-validation run concurrently for speed
  *   - DETERMINISTIC: Pinned to a specific block number
- *   - GRACEFUL DEGRADATION: OKX failure → RPC-only (still useful)
+ *   - GRACEFUL DEGRADATION: Cross-validation failure → primary-only (still useful)
  *
  * @param proposedTxHex      - Raw hex transaction data to simulate
  * @param userAddress        - The wallet address executing the tx
@@ -441,11 +441,11 @@ async function runOKXSimulation(
  * @param tokenOutAddress    - The token the user expects to receive (for slippage calc)
  * @param expectedOutputRaw  - Expected output in raw token units (bigint) for slippage
  * @param tokenOutDecimals   - Decimals of the output token (for formatting)
- * @param chainId            - X Layer chain ID (196/195)
- * @param txValue            - ETH/OKB value sent with the tx (for native swaps)
+ * @param chainId            - HashKey Chain ID (177/133)
+ * @param txValue            - ETH/HSK value sent with the tx (for native swaps)
  * @param thresholds         - Optional custom thresholds
  * @param rpcClient          - Optional pre-configured RPC client (for testing/DI)
- * @param okxClient          - Optional pre-configured OKX client (for testing/DI)
+ * @param goPlusClient          - Optional pre-configured cross-validation client (for testing/DI)
  */
 export async function simulateTransaction(
   proposedTxHex: HexString,
@@ -454,11 +454,11 @@ export async function simulateTransaction(
   tokenOutAddress: Address | null,
   expectedOutputRaw: bigint | null,
   tokenOutDecimals: number = 18,
-  chainId: SupportedChainId = 196,
+  chainId: SupportedChainId = 177,
   txValue: string = "0",
   thresholds: Partial<SimulationThresholds> = {},
-  rpcClient?: XLayerRPCClient,
-  okxClient?: OKXSecurityClient,
+  rpcClient?: HashKeyRPCClient,
+  goPlusClient?: GoPlusSecurityClient,
 ): Promise<AnalyzerResult> {
   const ANALYZER_NAME = "tx-simulation-analyzer";
   const startTime = performance.now();
@@ -478,12 +478,12 @@ export async function simulateTransaction(
     // ------------------------------------------------------------------
     // Step 1: Run BOTH simulations in parallel
     // ------------------------------------------------------------------
-    // RPC simulation gives us exact execution results.
-    // OKX simulation gives us higher-level threat intelligence.
+    // Primary RPC simulation gives us exact execution results.
+    // Cross-validation via second RPC provides independent verification.
     // Running them concurrently saves ~200ms wall-clock time.
 
-    const rpc = rpcClient ?? new XLayerRPCClient(chainId);
-    const okx = okxClient ?? new OKXSecurityClient();
+    const rpc = rpcClient ?? new HashKeyRPCClient(chainId);
+    const goPlus = goPlusClient ?? new GoPlusSecurityClient();
 
     const callParams: SimulationCallParams = {
       from: userAddress,
@@ -492,7 +492,7 @@ export async function simulateTransaction(
       value: txValue,
     };
 
-    const [rpcResult, okxResult] = await Promise.all([
+    const [rpcResult, crossValidationResult] = await Promise.all([
       runRPCSimulation(
         rpc,
         callParams,
@@ -500,8 +500,8 @@ export async function simulateTransaction(
         userAddress,
         resolvedThresholds.simulationTimeoutMs,
       ),
-      runOKXSimulation(
-        okx,
+      runCrossValidationSimulation(
+        goPlus,
         userAddress,
         targetAddress,
         proposedTxHex,
@@ -528,7 +528,7 @@ export async function simulateTransaction(
           "critical",
           `Transaction simulation REVERTED: "${ethCallResult.revertReason ?? "unknown reason"}". ` +
             `If executed on-chain, this transaction would fail and waste ` +
-            `approximately ${wastedGasCostOKB} OKB in gas. ` +
+            `approximately ${wastedGasCostOKB} HSK in gas. ` +
             `DO NOT execute this transaction until the revert is resolved.`,
         ),
       );
@@ -550,8 +550,8 @@ export async function simulateTransaction(
     let actualOutputAmount: string | null = null;
 
     if (ethCallResult.success) {
-      // Strategy 1: OKX balance change reporting (REMOVED in v6)
-      // The OKX v6 API no longer reports balance changes. We rely entirely
+      // Strategy 1: GoPlus isRiskTokenbalance change reporting (REMOVED in v6)
+      // The GoPlus isRiskTokenv6 API no longer reports balance changes. We rely entirely
       // on native RPC simulation (eth_call) decoding.
       let actualOutputRaw: bigint | null = null;
 
@@ -636,44 +636,44 @@ export async function simulateTransaction(
     }
 
     // ------------------------------------------------------------------
-    // Step 5: OKX cross-validation results
+    // Step 5: Cross-validation results (dual-RPC)
     // ------------------------------------------------------------------
-    let okxRiskLevel: string | null = null;
-    let okxRiskMessages: string[] = [];
+    let crossValidationRiskLevel: string | null = null;
+    let crossValidationRiskMessages: string[] = [];
     const balanceChanges: TxSimulationReport["balanceChanges"] = []; // Always empty now
 
-    if (okxResult) {
-      if (okxResult.action === "block") {
-        okxRiskLevel = "danger";
-      } else if (okxResult.action === "warn") {
-        okxRiskLevel = "warning";
+    if (crossValidationResult) {
+      if (crossValidationResult.action === "block") {
+        crossValidationRiskLevel = "danger";
+      } else if (crossValidationResult.action === "warn") {
+        crossValidationRiskLevel = "warning";
       } else {
-        okxRiskLevel = "safe";
+        crossValidationRiskLevel = "safe";
       }
 
-      if (okxResult.riskItemDetail) {
-        okxRiskMessages = okxResult.riskItemDetail.map((r: any) => r.desc);
+      if (crossValidationResult.riskItemDetail) {
+        crossValidationRiskMessages = crossValidationResult.riskItemDetail.map((r: any) => r.desc);
       }
 
-      // Flag OKX danger rating
-      if (okxRiskLevel === "danger") {
+      // Flag cross-validation danger rating
+      if (crossValidationRiskLevel === "danger") {
         flags.push(
           createFlag(
             RiskFlagCode.UNEXPECTED_STATE_CHANGE,
             "high",
-            `OKX transaction pre-execution scan rated this transaction as DANGER (Blocked). ` +
-              `Risk messages: ${okxRiskMessages.join("; ") || "none provided"}. ` +
-              `The OKX security oracle independently flagged this transaction as unsafe. ` +
+            `Cross-validation pre-execution scan rated this transaction as DANGER (Blocked). ` +
+              `Risk messages: ${crossValidationRiskMessages.join("; ") || "none provided"}. ` +
+              `The cross-validation oracle independently flagged this transaction as unsafe. ` +
               `This is a strong signal that the transaction should NOT be executed.`,
           ),
         );
-      } else if (okxRiskLevel === "warning") {
+      } else if (crossValidationRiskLevel === "warning") {
         flags.push(
           createFlag(
             RiskFlagCode.UNEXPECTED_STATE_CHANGE,
             "medium",
-            `OKX transaction pre-execution scan rated this transaction as WARNING. ` +
-              `Risk messages: ${okxRiskMessages.join("; ") || "none provided"}. ` +
+            `Cross-validation pre-execution scan rated this transaction as WARNING. ` +
+              `Risk messages: ${crossValidationRiskMessages.join("; ") || "none provided"}. ` +
               `Proceed with additional caution and verify the transaction details.`,
           ),
         );
@@ -691,9 +691,9 @@ export async function simulateTransaction(
         createFlag(
           RiskFlagCode.GAS_ESTIMATION_FAILED,
           "low",
-          `Gas cost is elevated: ${gasCostOKB} OKB ` +
-            `(threshold: ${resolvedThresholds.maxGasCostOKB} OKB). ` +
-            `This may indicate a complex multi-hop route or X Layer network congestion. ` +
+          `Gas cost is elevated: ${gasCostOKB} HSK ` +
+            `(threshold: ${resolvedThresholds.maxGasCostOKB} HSK). ` +
+            `This may indicate a complex multi-hop route or HashKey Chain network congestion. ` +
             `Factor this cost into profitability calculations.`,
         ),
       );
@@ -737,8 +737,8 @@ export async function simulateTransaction(
       preBalanceSnapshot: preBalance,
       balanceChanges,
 
-      okxRiskLevel,
-      okxRiskMessages,
+      crossValidationRiskLevel,
+      crossValidationRiskMessages,
 
       simulationBlock: ethCallResult.blockNumber.toString(),
       chainId,
@@ -759,7 +759,7 @@ export async function simulateTransaction(
       logger.warn(`[${ANALYZER_NAME}] ⚠️  Simulation passed with concerns`, {
         score,
         slippageBps,
-        okxRiskLevel,
+        crossValidationRiskLevel,
         flagCount: flags.length,
         durationMs,
       });
@@ -792,7 +792,7 @@ export async function simulateTransaction(
           : String(err);
 
     const isTimeout =
-      err instanceof GuardianError && err.code === ErrorCode.OKX_API_TIMEOUT;
+      err instanceof GuardianError && err.code === ErrorCode.API_TIMEOUT;
 
     logger.error(`[${ANALYZER_NAME}] ❌ Simulation FAILED — FAILING CLOSED`, {
       error: errorMessage,
@@ -809,7 +809,7 @@ export async function simulateTransaction(
         `Guardian Protocol fails CLOSED — this transaction is blocked ` +
         `until a successful simulation can be completed. ` +
         (isTimeout
-          ? `The X Layer RPC node did not respond within the timeout period. ` +
+          ? `The HashKey Chain RPC node did not respond within the timeout period. ` +
             `Retry after network conditions improve.`
           : `The simulation infrastructure encountered an error. ` +
             `Verify the transaction data is well-formed and retry.`),
@@ -845,7 +845,7 @@ export async function simulateTransaction(
 
 /**
  * A lightweight check that ONLY tests if the transaction reverts.
- * Does not compute slippage or cross-validate with OKX.
+ * Does not compute slippage or run cross-validation.
  *
  * Use this when the calling agent just needs a fast "will this work?"
  * answer without the full analysis. ~2x faster than full simulation.
@@ -854,15 +854,15 @@ export async function quickRevertCheck(
   proposedTxHex: HexString,
   userAddress: Address,
   targetAddress: Address,
-  chainId: SupportedChainId = 196,
-  rpcClient?: XLayerRPCClient,
+  chainId: SupportedChainId = 177,
+  rpcClient?: HashKeyRPCClient,
 ): Promise<{
   willRevert: boolean;
   revertReason: string | null;
   estimatedGas: string;
   gasCostOKB: string;
 }> {
-  const rpc = rpcClient ?? new XLayerRPCClient(chainId);
+  const rpc = rpcClient ?? new HashKeyRPCClient(chainId);
 
   try {
     const [ethCallResult, gasPrice] = await Promise.all([

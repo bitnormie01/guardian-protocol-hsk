@@ -372,8 +372,8 @@ function detectCorrelations(
     }
   }
 
-  // --- Correlation 4: Honeypot/blacklist + OKX danger ---
-  // If token risk says fatal AND OKX simulation says danger,
+  // --- Correlation 4: Honeypot/blacklist + GoPlus isRiskTokendanger ---
+  // If token risk says fatal AND GoPlus isRiskTokensimulation says danger,
   // this is a double-confirmed scam. Apply maximum penalty.
   if (tokenResult && simResult) {
     const hasFatalToken = tokenResult.flags.some(
@@ -381,19 +381,19 @@ function detectCorrelations(
         f.code === RiskFlagCode.HONEYPOT_DETECTED ||
         f.code === RiskFlagCode.BLACKLIST_FUNCTION,
     );
-    const hasOKXDanger = simResult.flags.some(
+    const hasSimDanger = simResult.flags.some(
       (f) =>
         f.code === RiskFlagCode.UNEXPECTED_STATE_CHANGE &&
         f.severity === "high",
     );
 
-    if (hasFatalToken && hasOKXDanger) {
+    if (hasFatalToken && hasSimDanger) {
       correlations.push({
         type: "correlation",
         analyzers: ["token-risk-analyzer", "tx-simulation-analyzer"],
         description:
           "DOUBLE-CONFIRMED SCAM: Token flagged as honeypot/blacklisted " +
-          "AND OKX simulation independently flagged as dangerous. " +
+          "AND GoPlus isRiskTokensimulation independently flagged as dangerous. " +
           "This token is almost certainly malicious.",
         penaltyMultiplier: 0.0,
       });

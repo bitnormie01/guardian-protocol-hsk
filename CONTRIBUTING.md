@@ -1,6 +1,6 @@
 # Contributing to Guardian Protocol
 
-Thank you for your interest in making autonomous agents safer on X Layer. Here's how to contribute.
+Thank you for your interest in making autonomous agents safer on HashKey Chain. Here's how to contribute.
 
 ## 🛠️ Development Setup
 
@@ -14,7 +14,7 @@ npm install
 
 # Copy environment template
 cp .env.example .env
-# Edit .env with your OKX API credentials and RPC endpoints
+# Edit .env with your GoPlus API key (optional) and RPC endpoints
 
 # Run tests
 npm test
@@ -26,7 +26,7 @@ npm run dev
 ## 🧪 Running Tests
 
 ```bash
-# All tests (72 tests, 5 suites)
+# All tests (76 tests, 6 suites)
 npm test
 
 # Watch mode (re-runs on file changes)
@@ -48,6 +48,7 @@ npx vitest run --coverage
 | MEV Detection Analyzer | 10 | `tests/unit/analyzers/mev-detection.test.ts` |
 | AMM Pool Analyzer | 13 | `tests/unit/analyzers/amm-pool-analyzer.test.ts` |
 | Risk Engine | 27 | `tests/unit/scoring/risk-engine.test.ts` |
+| Trade Context | 2 | `tests/unit/services/trade-context.test.ts` |
 
 ## 📐 Code Standards
 
@@ -118,7 +119,7 @@ refactor: rebalance risk engine for 4 analyzers
 1. Fork the repository
 2. Create a feature branch (`git checkout -b feat/your-feature`)
 3. Write tests FIRST, then implementation
-4. Ensure `npm test` passes with zero failures (currently 72/72)
+4. Ensure `npm test` passes with zero failures (currently 76/76)
 5. Ensure `npx tsc --noEmit` passes with zero errors
 6. Submit a PR with a clear description of what and why
 

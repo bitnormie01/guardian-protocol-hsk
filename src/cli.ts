@@ -78,12 +78,12 @@ function validateDistinctTokens(tokenIn: string, tokenOut: string): void {
   }
 }
 
-/** Validates chainId is a supported X Layer chain. */
+/** Validates chainId is a supported HashKey Chain network. */
 function validateChainId(chainId: number): void {
-  if (chainId !== 196 && chainId !== 195) {
+  if (chainId !== 177 && chainId !== 133) {
     throw new Error(
-      `Unsupported chainId: ${chainId}. Guardian Protocol supports X Layer Mainnet (196) ` +
-      `and X Layer Testnet (195) only.`,
+      `Unsupported chainId: ${chainId}. Guardian Protocol supports HashKey Chain Mainnet (177) ` +
+      `and HashKey Chain Testnet (133) only.`,
     );
   }
 }
@@ -112,7 +112,7 @@ function validateThreshold(threshold: number): void {
 program
   .name("guardian")
   .description(
-    "Guardian Protocol — Fail-closed security middleware for autonomous agents on X Layer",
+    "Guardian Protocol — Fail-closed security middleware for autonomous agents on HashKey Chain",
   )
   .version("0.2.1");
 
@@ -133,7 +133,7 @@ program
     "User wallet address",
     "0x0000000000000000000000000000000000000001",
   )
-  .option("-c, --chain <chainId>", "Chain ID (196=mainnet, 195=testnet)", "196")
+  .option("-c, --chain <chainId>", "Chain ID (177=mainnet, 133=testnet)", "177")
   .option("-t, --tx <hex>", "Proposed transaction hex for simulation")
   .option("--tx-to <address>", "Target contract address for --tx simulation")
   .option("--token-in-decimals <decimals>", "Decimal precision for tokenIn")
@@ -177,7 +177,7 @@ program
           amountRaw: amount,
           amount,
           userAddress: options.user as Address,
-          chainId: chainId as 196 | 195,
+          chainId: chainId as 177 | 133,
           proposedTxHex: options.tx ? (options.tx as HexString) : undefined,
           proposedTxTarget: options.txTo ? (options.txTo as Address) : undefined,
           tokenInDecimals: options.tokenInDecimals
@@ -221,7 +221,7 @@ program
   .command("scan-token")
   .description("Scan a single token for security risks (honeypot, tax, etc.)")
   .argument("<tokenAddress>", "Token contract address to scan")
-  .option("-c, --chain <chainId>", "Chain ID (196=mainnet, 195=testnet)", "196")
+  .option("-c, --chain <chainId>", "Chain ID (177=mainnet, 133=testnet)", "177")
   .action(async (tokenAddress: string, options: { chain: string }) => {
     try {
       // --- Input Validation ---
@@ -231,7 +231,7 @@ program
 
       const request: TokenScanRequest = {
         tokenAddress: tokenAddress as Address,
-        chainId: chainId as 196 | 195,
+        chainId: chainId as 177 | 133,
       };
 
       const response = await scanToken(request);
@@ -264,7 +264,7 @@ program
     "0x0000000000000000000000000000000000000001",
   )
   .option("--to <address>", "Target contract address")
-  .option("-c, --chain <chainId>", "Chain ID (196=mainnet, 195=testnet)", "196")
+  .option("-c, --chain <chainId>", "Chain ID (177=mainnet, 133=testnet)", "177")
   .action(async (txHex: string, options: { user: string; to?: string; chain: string }) => {
     try {
       // --- Input Validation ---
@@ -278,7 +278,7 @@ program
         proposedTxHex: txHex as HexString,
         userAddress: options.user as Address,
         targetAddress: options.to as Address | undefined,
-        chainId: chainId as 196 | 195,
+        chainId: chainId as 177 | 133,
       };
 
       const response = await simulateTx(request);

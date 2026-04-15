@@ -1,7 +1,7 @@
 {
   "name": "@guardian-protocol/skill",
   "version": "0.2.1",
-  "description": "Security and risk-management middleware skill for autonomous agents on X Layer — OKX BuildX Hackathon",
+  "description": "Security and risk-management middleware skill for autonomous agents on HashKey Chain — HashKey Hackathon",
   "author": "GuardianTeam",
   "license": "MIT",
   "type": "module",
@@ -24,13 +24,13 @@
     "proof:log": "tsx scripts/log-proof.ts"
   },
   "keywords": [
-    "okx",
-    "onchainos",
-    "xlayer",
+    "hashkey",
+    "hashkeychain",
     "security",
     "agent-skill",
     "web3",
-    "hackathon"
+    "hackathon",
+    "goplus"
   ],
   "engines": {
     "node": ">=20.0.0"

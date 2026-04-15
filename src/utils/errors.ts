@@ -16,9 +16,9 @@ export enum ErrorCode {
   // Configuration / credential errors
   CONFIG_MISSING = "GUARDIAN_CONFIG_MISSING",
 
-  // OKX API errors
-  OKX_API_ERROR = "OKX_API_ERROR",
-  OKX_API_TIMEOUT = "OKX_API_TIMEOUT",
+  // GoPlus API errors
+  API_ERROR = "API_ERROR",
+  API_TIMEOUT = "API_TIMEOUT",
 
   // Analysis errors
   TOKEN_NOT_FOUND = "TOKEN_NOT_FOUND",

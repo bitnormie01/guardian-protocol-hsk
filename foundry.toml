@@ -10,3 +10,7 @@ evm_version = "cancun"
 line_length = 100
 tab_width = 4
 bracket_spacing = true
+
+[rpc_endpoints]
+hashkey_testnet = "https://testnet.hsk.xyz"
+hashkey_mainnet = "https://mainnet.hsk.xyz"

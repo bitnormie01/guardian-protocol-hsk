@@ -1,6 +1,12 @@
 #!/usr/bin/env tsx
-import "dotenv/config";
+import { config as loadEnv } from "dotenv";
 import { spawnSync } from "node:child_process";
+
+loadEnv();
+loadEnv({
+  path: "/home/benevolencia/hackathon/hashkeyHackathon/.env",
+  override: false,
+});
 
 function requiredEnv(keys: string[]): string {
   for (const key of keys) {
@@ -14,9 +20,14 @@ function requiredEnv(keys: string[]): string {
 }
 
 function main(): void {
-  const rpcUrl = requiredEnv(["XLAYER_RPC_URL", "RPC_URL", "OKX_RPC_URL"]);
+  const rpcUrl =
+    process.env["HASHKEY_TESTNET_RPC_URL"] ??
+    process.env["HASHKEY_RPC_URL"] ??
+    process.env["RPC_URL"] ??
+    "https://testnet.hsk.xyz";
   const privateKey = requiredEnv([
-    "XLAYER_PRIVATE_KEY",
+    "DEPLOYER_KEY",
+    "HASHKEY_PRIVATE_KEY",
     "PRIVATE_KEY",
     "DEPLOYER_PRIVATE_KEY",
   ]);
@@ -30,6 +41,8 @@ function main(): void {
       rpcUrl,
       "--private-key",
       privateKey,
+      "--chain-id",
+      "133",
       "--broadcast",
     ],
     {

@@ -50,7 +50,7 @@ app.post('/api/evaluate', async (req, res) => {
       tokenOut,
       amountRaw: normalizedAmountRaw,
       userAddress,
-      chainId: chainId || 196,
+      chainId: chainId || 177,
       proposedTxHex,
       proposedTxTarget,
     };
@@ -73,7 +73,7 @@ app.post('/api/scan', async (req, res) => {
 
     console.log(`[API] scanToken requested for: ${tokenAddress}`);
     
-    const result = await scanToken({ tokenAddress, chainId: chainId || 196 });
+    const result = await scanToken({ tokenAddress, chainId: chainId || 177 });
     return res.json(result);
   } catch (err: any) {
     console.error("[API] Error in scanToken", err);
@@ -87,7 +87,7 @@ app.post('/api/simulate', async (req, res) => {
     if (!proposedTxHex) return res.status(400).json({ error: 'Missing proposedTxHex' });
     const result = await simulateTx({
       proposedTxHex,
-      chainId: chainId || 196,
+      chainId: chainId || 177,
       userAddress: userAddress || "0x0000000000000000000000000000000000000001",
       targetAddress
     });
@@ -108,7 +108,7 @@ app.post('/api/mev', async (req, res) => {
       estimatedTradeUsd || 1000,
       userAddress || "0x0000000000000000000000000000000000000001",
       proposedTxHex,
-      chainId || 196
+      chainId || 177
     );
     return res.json(result);
   } catch (err: any) {
@@ -124,7 +124,7 @@ app.post('/api/amm', async (req, res) => {
     const result = await analyzeAMMPoolRisk(
       poolAddress,
       estimatedTradeUsd || 1000,
-      chainId || 196
+      chainId || 177
     );
     return res.json(result);
   } catch (err: any) {

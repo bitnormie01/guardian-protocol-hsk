@@ -3,16 +3,16 @@
 // ==========================================================================
 //
 // These tests validate simulation logic WITHOUT hitting real RPC nodes
-// or the OKX API. We mock both the XLayerRPCClient and OKXSecurityClient
+// or the GoPlus API. We mock both the HashKeyRPCClient and GoPlusSecurityClient
 // to return controlled data and verify:
 //
 //   1. Successful simulation → high score, no critical flags
 //   2. Reverted transaction → score 0, wasted gas calculated
-//   3. High slippage → flagged via eth_call return data (not OKX balance changes)
-//   4. OKX action:block cross-validation → additional flags ("DANGER")
-//   5. OKX API timeout → graceful degradation (RPC-only result)
+//   3. High slippage → flagged via eth_call return data (not GoPlus isRiskTokenbalance changes)
+//   4. GoPlus isRiskTokenaction:block cross-validation → additional flags ("DANGER")
+//   5. GoPlus API timeout → graceful degradation (RPC-only result)
 //   6. RPC failure → fail closed with score 0
-//   7. OKX action:warn → medium UNEXPECTED_STATE_CHANGE flag  
+//   7. GoPlus isRiskTokenaction:warn → medium UNEXPECTED_STATE_CHANGE flag  
 //   8. Quick revert check → lightweight fast-path
 //   9. Slippage edge cases → zero and null expected output
 // ==========================================================================
@@ -24,9 +24,9 @@ import {
 } from "../../../src/analyzers/tx-simulation.js";
 import { RiskFlagCode } from "../../../src/types/output.js";
 import type { Address, HexString } from "../../../src/types/input.js";
-import type { XLayerRPCClient } from "../../../src/services/xlayer-rpc-client.js";
-import type { OKXSecurityClient } from "../../../src/services/okx-security-client.js";
-import type { OKXTxSimulationData } from "../../../src/types/okx-api.js";
+import type { HashKeyRPCClient } from "../../../src/services/hashkey-rpc-client.js";
+import type { GoPlusSecurityClient } from "../../../src/services/goplus-security-client.js";
+import type { TxSimulationData } from "../../../src/types/hashkey-api.js";
 
 // ---------------------------------------------------------------------------
 // Test Constants
@@ -46,7 +46,7 @@ const RETURN_DATA_1000_USDC = "0x" + (1_000_000_000n).toString(16).padStart(64, 
 // ---------------------------------------------------------------------------
 
 /**
- * Creates a mock XLayerRPCClient.
+ * Creates a mock HashKeyRPCClient.
  * Default simulateCall returns 1000 USDC (matching the expectedOutputRaw used
  * in most tests so slippage = 0 by default).
  */
@@ -56,7 +56,7 @@ function createMockRPCClient(overrides: {
   getGasPrice?: ReturnType<typeof vi.fn>;
   getLatestBlockNumber?: ReturnType<typeof vi.fn>;
   getNativeBalance?: ReturnType<typeof vi.fn>;
-}): XLayerRPCClient {
+}): HashKeyRPCClient {
   return {
     simulateCall:
       overrides.simulateCall ??
@@ -89,29 +89,29 @@ function createMockRPCClient(overrides: {
         rawBalance: 1_000_000_000_000_000_000n,
         formatted: "1.0",
       }),
-  } as unknown as XLayerRPCClient;
+  } as unknown as HashKeyRPCClient;
 }
 
 /**
- * Creates a mock OKXSecurityClient.
- * The default result uses the OKX API v6 schema: action + riskItemDetail.
+ * Creates a mock GoPlusSecurityClient.
+ * The default result uses the GoPlus API v6 schema: action + riskItemDetail.
  * action: "" = safe, action: "warn" = warning, action: "block" = danger.
  */
-function createMockOKXClient(
-  simulationResult: OKXTxSimulationData | null = null,
+function createMockGoPlusClient(
+  simulationResult: TxSimulationData | null = null,
   shouldFail: boolean = false,
-): OKXSecurityClient {
-  const defaultResult: OKXTxSimulationData = {
-    action: "",           // Empty string = safe in OKX v6
+): GoPlusSecurityClient {
+  const defaultResult: TxSimulationData = {
+    action: "",           // Empty string = safe in GoPlus isRiskTokenv6
     riskItemDetail: [],   // No risk items
   };
 
   return {
     simulateTransaction: shouldFail
-      ? vi.fn().mockRejectedValue(new Error("OKX API unavailable"))
+      ? vi.fn().mockRejectedValue(new Error("GoPlus API unavailable"))
       : vi.fn().mockResolvedValue(simulationResult ?? defaultResult),
     scanTokenRisk: vi.fn(),
-  } as unknown as OKXSecurityClient;
+  } as unknown as GoPlusSecurityClient;
 }
 
 // ---------------------------------------------------------------------------
@@ -129,7 +129,7 @@ describe("Transaction Simulation Analyzer", () => {
   describe("successful simulation", () => {
     it("should return high score for a clean swap with acceptable slippage", async () => {
       const rpcClient = createMockRPCClient({});
-      const okxClient = createMockOKXClient();
+      const goPlusClient = createMockGoPlusClient();
 
       // expectedOutputRaw = 1_000_000_000n (1000 USDC), mock returns same → 0% slippage
       const result = await simulateTransaction(
@@ -139,11 +139,11 @@ describe("Transaction Simulation Analyzer", () => {
         TOKEN_OUT,
         1_000_000_000n,
         6,
-        196,
+        177,
         "0",
         {},
         rpcClient,
-        okxClient,
+        goPlusClient,
       );
 
       expect(result.analyzerName).toBe("tx-simulation-analyzer");
@@ -174,7 +174,7 @@ describe("Transaction Simulation Analyzer", () => {
           blockNumber: 1_000_000n,
         }),
       });
-      const okxClient = createMockOKXClient();
+      const goPlusClient = createMockGoPlusClient();
 
       const result = await simulateTransaction(
         PROPOSED_TX,
@@ -183,11 +183,11 @@ describe("Transaction Simulation Analyzer", () => {
         TOKEN_OUT,
         1_000_000_000n,
         6,
-        196,
+        177,
         "0",
         {},
         rpcClient,
-        okxClient,
+        goPlusClient,
       );
 
       // Score must be 0 — reverted tx
@@ -230,7 +230,7 @@ describe("Transaction Simulation Analyzer", () => {
           blockNumber: 1_000_000n,
         }),
       });
-      const okxClient = createMockOKXClient();
+      const goPlusClient = createMockGoPlusClient();
 
       // Expected 1000 USDC, actual (from eth_call) = 900 USDC → 10% slippage
       const result = await simulateTransaction(
@@ -240,11 +240,11 @@ describe("Transaction Simulation Analyzer", () => {
         TOKEN_OUT,
         1_000_000_000n, // 1000 USDC expected
         6,
-        196,
+        177,
         "0",
         { maxSlippageBps: 500 }, // 5% max
         rpcClient,
-        okxClient,
+        goPlusClient,
       );
 
       // Slippage is 10% = 1000 bps, which exceeds 500 bps max → HIGH flag
@@ -273,7 +273,7 @@ describe("Transaction Simulation Analyzer", () => {
           blockNumber: 1_000_000n,
         }),
       });
-      const okxClient = createMockOKXClient();
+      const goPlusClient = createMockGoPlusClient();
 
       const result = await simulateTransaction(
         PROPOSED_TX,
@@ -282,11 +282,11 @@ describe("Transaction Simulation Analyzer", () => {
         TOKEN_OUT,
         1_000_000_000n,
         6,
-        196,
+        177,
         "0",
         { slippageWarningBps: 200, maxSlippageBps: 500 },
         rpcClient,
-        okxClient,
+        goPlusClient,
       );
 
       // 3% = 300 bps — above warning (200) but below max (500) → MEDIUM
@@ -299,13 +299,13 @@ describe("Transaction Simulation Analyzer", () => {
   });
 
   // -----------------------------------------------------------------------
-  // 4. OKX Danger Cross-Validation (action: "block")
+  // 4. GoPlus isRiskTokenDanger Cross-Validation (action: "block")
   // -----------------------------------------------------------------------
-  describe("OKX cross-validation", () => {
-    it("should flag when OKX returns action:block (danger level)", async () => {
+  describe("dual-RPC cross-validation", () => {
+    it("should flag when GoPlus isRiskTokenreturns action:block (danger level)", async () => {
       const rpcClient = createMockRPCClient({});
-      // OKX v6 schema: action:"block" + riskItemDetail array
-      const okxClient = createMockOKXClient({
+      // GoPlus isRiskTokenv6 schema: action:"block" + riskItemDetail array
+      const goPlusClient = createMockGoPlusClient({
         action: "block",
         riskItemDetail: [
           {
@@ -328,11 +328,11 @@ describe("Transaction Simulation Analyzer", () => {
         TOKEN_OUT,
         1_000_000_000n,
         6,
-        196,
+        177,
         "0",
         {},
         rpcClient,
-        okxClient,
+        goPlusClient,
       );
 
       const dangerFlag = result.flags.find(
@@ -345,12 +345,12 @@ describe("Transaction Simulation Analyzer", () => {
       expect(dangerFlag!.message).toContain("drainer");
 
       const report = result.data as Record<string, unknown>;
-      expect(report["okxRiskLevel"]).toBe("danger");
+      expect(report["crossValidationRiskLevel"]).toBe("danger");
     });
 
-    it("should flag warning when OKX returns action:warn (medium severity)", async () => {
+    it("should flag warning when GoPlus isRiskTokenreturns action:warn (medium severity)", async () => {
       const rpcClient = createMockRPCClient({});
-      const okxClient = createMockOKXClient({
+      const goPlusClient = createMockGoPlusClient({
         action: "warn",
         riskItemDetail: [
           {
@@ -368,11 +368,11 @@ describe("Transaction Simulation Analyzer", () => {
         TOKEN_OUT,
         1_000_000_000n,
         6,
-        196,
+        177,
         "0",
         {},
         rpcClient,
-        okxClient,
+        goPlusClient,
       );
 
       const warningFlag = result.flags.find(
@@ -384,17 +384,17 @@ describe("Transaction Simulation Analyzer", () => {
       expect(warningFlag!.message).toContain("WARNING");
 
       const report = result.data as Record<string, unknown>;
-      expect(report["okxRiskLevel"]).toBe("warning");
+      expect(report["crossValidationRiskLevel"]).toBe("warning");
     });
   });
 
   // -----------------------------------------------------------------------
-  // 5. OKX API Failure — Graceful Degradation
+  // 5. GoPlus API Failure — Graceful Degradation
   // -----------------------------------------------------------------------
-  describe("OKX API failure — graceful degradation", () => {
-    it("should continue with RPC-only results when OKX fails", async () => {
+  describe("GoPlus API failure — graceful degradation", () => {
+    it("should continue with RPC-only results when GoPlus isRiskTokenfails", async () => {
       const rpcClient = createMockRPCClient({});
-      const okxClient = createMockOKXClient(null, true); // OKX will fail
+      const goPlusClient = createMockGoPlusClient(null, true); // GoPlus isRiskTokenwill fail
 
       const result = await simulateTransaction(
         PROPOSED_TX,
@@ -403,19 +403,19 @@ describe("Transaction Simulation Analyzer", () => {
         TOKEN_OUT,
         1_000_000_000n,
         6,
-        196,
+        177,
         "0",
         {},
         rpcClient,
-        okxClient,
+        goPlusClient,
       );
 
-      // Should still get a valid result — RPC worked even though OKX failed
+      // Should still get a valid result — RPC worked even though GoPlus isRiskTokenfailed
       expect(result.score).toBeGreaterThan(0);
 
       const report = result.data as Record<string, unknown>;
       expect(report["simulationSuccess"]).toBe(true);
-      expect(report["okxRiskLevel"]).toBeNull();
+      expect(report["crossValidationRiskLevel"]).toBeNull();
     });
   });
 
@@ -429,7 +429,7 @@ describe("Transaction Simulation Analyzer", () => {
           .fn()
           .mockRejectedValue(new Error("RPC node unreachable")),
       });
-      const okxClient = createMockOKXClient();
+      const goPlusClient = createMockGoPlusClient();
 
       const result = await simulateTransaction(
         PROPOSED_TX,
@@ -438,11 +438,11 @@ describe("Transaction Simulation Analyzer", () => {
         TOKEN_OUT,
         1_000_000_000n,
         6,
-        196,
+        177,
         "0",
         {},
         rpcClient,
-        okxClient,
+        goPlusClient,
       );
 
       expect(result.score).toBe(0);
@@ -474,7 +474,7 @@ describe("Transaction Simulation Analyzer", () => {
         PROPOSED_TX,
         USER_ADDRESS,
         ROUTER_ADDRESS,
-        196,
+        177,
         rpcClient,
       );
 
@@ -490,7 +490,7 @@ describe("Transaction Simulation Analyzer", () => {
         PROPOSED_TX,
         USER_ADDRESS,
         ROUTER_ADDRESS,
-        196,
+        177,
         rpcClient,
       );
 
@@ -510,7 +510,7 @@ describe("Transaction Simulation Analyzer", () => {
         PROPOSED_TX,
         USER_ADDRESS,
         ROUTER_ADDRESS,
-        196,
+        177,
         rpcClient,
       );
 
@@ -526,7 +526,7 @@ describe("Transaction Simulation Analyzer", () => {
   describe("slippage edge cases", () => {
     it("should handle zero expected output gracefully (no slippage calc)", async () => {
       const rpcClient = createMockRPCClient({});
-      const okxClient = createMockOKXClient();
+      const goPlusClient = createMockGoPlusClient();
 
       // expectedOutputRaw = 0n — edge case: division by zero protection
       const result = await simulateTransaction(
@@ -536,11 +536,11 @@ describe("Transaction Simulation Analyzer", () => {
         TOKEN_OUT,
         0n,
         6,
-        196,
+        177,
         "0",
         {},
         rpcClient,
-        okxClient,
+        goPlusClient,
       );
 
       // Should not crash, simulation should succeed
@@ -551,7 +551,7 @@ describe("Transaction Simulation Analyzer", () => {
 
     it("should handle null expected output (skip slippage calc entirely)", async () => {
       const rpcClient = createMockRPCClient({});
-      const okxClient = createMockOKXClient();
+      const goPlusClient = createMockGoPlusClient();
 
       const result = await simulateTransaction(
         PROPOSED_TX,
@@ -560,11 +560,11 @@ describe("Transaction Simulation Analyzer", () => {
         TOKEN_OUT,
         null, // No expected output provided by agent
         6,
-        196,
+        177,
         "0",
         {},
         rpcClient,
-        okxClient,
+        goPlusClient,
       );
 
       const report = result.data as Record<string, unknown>;

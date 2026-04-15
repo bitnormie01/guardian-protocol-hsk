@@ -32,7 +32,7 @@
 import type { Address, SupportedChainId } from "../types/input.js";
 import type { RiskFlag, RiskSeverity } from "../types/output.js";
 import { RiskFlagCode } from "../types/output.js";
-import { XLayerRPCClient } from "./xlayer-rpc-client.js";
+import { HashKeyRPCClient } from "./hashkey-rpc-client.js";
 import { logger } from "../utils/logger.js";
 import { parseAbi } from "viem";
 
@@ -131,7 +131,7 @@ function createFlag(
  * skills reference for swap planning and price verification.
  */
 async function analyzeTWAPOracle(
-  rpcClient: XLayerRPCClient,
+  rpcClient: HashKeyRPCClient,
   poolAddress: Address,
 ): Promise<{
   spotTick: number | null;
@@ -253,7 +253,7 @@ async function analyzeTWAPOracle(
  * This assessment is informed by the Uniswap AI v4-security-foundations skill.
  */
 async function assessV4HookRisk(
-  rpcClient: XLayerRPCClient,
+  rpcClient: HashKeyRPCClient,
   poolAddress: Address,
 ): Promise<{
   hasHook: boolean;
@@ -364,15 +364,15 @@ async function assessV4HookRisk(
  *   - uniswap-v4-security-foundations: Hook risk assessment framework
  *
  * @param poolAddress - The Uniswap V3/V4 pool contract address
- * @param chainId     - Target chain (196 for X Layer)
+ * @param chainId     - Target chain (177 for HashKey Chain)
  * @param rpcClient   - Optional pre-configured RPC client
  */
 export async function enrichWithUniswapAI(
   poolAddress: Address,
-  chainId: SupportedChainId = 196,
-  rpcClient?: XLayerRPCClient,
+  chainId: SupportedChainId = 177 as SupportedChainId,
+  rpcClient?: HashKeyRPCClient,
 ): Promise<UniswapPoolEnrichment> {
-  const rpc = rpcClient ?? new XLayerRPCClient(chainId);
+  const rpc = rpcClient ?? new HashKeyRPCClient(chainId);
 
   logger.info("[uniswap-ai] Starting Uniswap AI enrichment analysis", {
     poolAddress,

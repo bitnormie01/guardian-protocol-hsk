@@ -2,7 +2,7 @@
 // Guardian Protocol — GoPlus Token Security Enrichment
 // ==========================================================================
 //
-// The OKX OnchainOS v6 token-scan API returns a single `isRiskToken`
+// The GoPlus isRiskTokenOnchainOS v6 token-scan API returns a single `isRiskToken`
 // boolean. While useful for a go/no-go decision, it tells the agent
 // NOTHING about WHY a token is dangerous.
 //
@@ -69,7 +69,8 @@ const GOPLUS_CHAIN_MAP: Record<number, string> = {
   10: "10",         // Optimism
   43114: "43114",   // Avalanche C-Chain
   8453: "8453",     // Base
-  196: "196",       // X Layer Mainnet
+  177: "177",       // HashKey Chain Mainnet
+  133: "133",       // HashKey Chain Testnet
   324: "324",       // zkSync Era
   59144: "59144",   // Linea
   534352: "534352", // Scroll
@@ -87,7 +88,7 @@ const GOPLUS_CHAIN_MAP: Record<number, string> = {
  *
  * @returns The GoPlus security data, or null if the call fails.
  *          We NEVER let a GoPlus failure block the pipeline — the
- *          OKX `isRiskToken` flag is still authoritative.
+ *          GoPlus isRiskToken`isRiskToken` flag is still authoritative.
  */
 export async function fetchGoPlusTokenSecurity(
   tokenAddress: string,

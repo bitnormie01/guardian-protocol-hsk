@@ -6,9 +6,9 @@ license: MIT
 runtime: node>=20
 entrypoint: src/index.ts
 description: >
-  Fail-closed security middleware for autonomous agents executing swaps on X Layer.
+  Fail-closed security middleware for autonomous agents executing swaps on HashKey Chain.
   Guardian Protocol is an agent-native security oracle: it intercepts every proposed
-  swap, runs four parallel security engines (token risk via OKX + GoPlus dual-oracle,
+  swap, runs four parallel security engines (token risk via GoPlus dual-oracle,
   transaction simulation with 8-variant invariant fuzzing, MEV detection with private
   flow awareness, and on-chain concentrated liquidity pool analysis), aggregates the
   results through a weighted risk engine with penalty cascading and cross-analyzer
@@ -20,8 +20,8 @@ tags:
   - security
   - fail-closed
   - risk-management
-  - xlayer
-  - onchainos
+  - hashkey-chain
+  - horizon-hackathon
   - mev-protection
   - honeypot-detection
   - tx-simulation
@@ -37,10 +37,10 @@ tags:
   - middleware
   - dual-oracle
   - mainnet-hardened
-  - okx-security-api
+  - goplus-security
   - goplus
   - hackathon
-  - skill-arena
+  - ai-track
 commands:
   - evaluate
   - scan-token
@@ -50,34 +50,32 @@ exports:
   - scanToken
   - simulateTx
 chains:
-  - name: X Layer Mainnet
-    chainId: 196
-  - name: X Layer Testnet
-    chainId: 195
+  - name: HashKey Chain Mainnet
+    chainId: 177
+  - name: HashKey Chain Testnet
+    chainId: 133
 integrations:
-  - okx-security-api
-  - okx-dex-api
-  - goplus-security
-  - xlayer-rpc
-  - uniswap-ai/swap-integration
-  - uniswap-ai/uniswap-v4-hooks
-  - uniswap-ai/uniswap-driver
+  - goplus-security-api
+  - goplus-enrichment
+  - hashkey-rpc
+  - uniswap-v3-pool-reads
+  - foundry-contract-deployment
 ---
 
 # Guardian Protocol — Agent Skill
 
 ## IDENTITY
 
-You are a **security oracle skill**. Your single responsibility: determine whether a proposed on-chain swap on X Layer is safe to execute, and communicate that verdict in a machine-readable format that the calling agent can act on immediately.
+You are a **security oracle skill**. Your single responsibility: determine whether a proposed on-chain swap on HashKey Chain is safe to execute, and communicate that verdict in a machine-readable format that the calling agent can act on immediately.
 
 You do not execute trades. You do not hold funds. You do not suggest alternatives. You analyze, score, and verdict. That is all — and that is everything.
 
 ## WHEN TO INVOKE
 
-Invoke Guardian Protocol **every time** an agent is about to execute an on-chain swap on X Layer. No exceptions. No skipping "familiar" tokens. No bypassing for speed. The cost of a Guardian evaluation (~2 seconds) is orders of magnitude less than the cost of trading a honeypot.
+Invoke Guardian Protocol **every time** an agent is about to execute an on-chain swap on HashKey Chain. No exceptions. No skipping "familiar" tokens. No bypassing for speed. The cost of a Guardian evaluation (~2 seconds) is orders of magnitude less than the cost of trading a honeypot.
 
 **Invoke `evaluateTrade` before:**
-- Any DEX swap execution on X Layer
+- Any DEX swap execution on HashKey Chain
 - Any arbitrage execution in a trading loop
 - Any rebalancing transaction that crosses a DEX
 - Any yield strategy that acquires new tokens
@@ -108,9 +106,9 @@ isSafeToExecute: false → Do NOT execute. Inspect flags for reason.
 Guardian runs four independent security engines in parallel. Each contributes to the final verdict via a weighted scoring model.
 
 ### 1. Token Risk Analyzer — Weight: 30%
-**Oracle sources:** OKX Security API (primary) + GoPlus Security (cross-validation)
+**Oracle sources:** GoPlus Security API (primary) + GoPlus cross-validation (secondary)
 
-Runs dual-oracle token scanning on both `tokenIn` and `tokenOut`. The OKX Security API is the authoritative source; GoPlus provides independent cross-validation on honeypot classification. Disagreement between oracles triggers a score penalty.
+Runs dual-oracle token scanning on both `tokenIn` and `tokenOut`. The GoPlus Security API is the authoritative source; a second independent GoPlus call provides cross-validation on honeypot classification. Disagreement between oracles triggers a score penalty.
 
 **Detects:**
 - Honeypots (buy-only contracts — funds permanently trapped)
@@ -121,14 +119,14 @@ Runs dual-oracle token scanning on both `tokenIn` and `tokenOut`. The OKX Securi
 - Centralized holder distribution (rug-pull precursor)
 - Retained ownership (deployer admin privileges active)
 
-**Fail behavior:** If OKX API is unreachable → `score: 0` → trade blocked.
+**Fail behavior:** If GoPlus API is unreachable → `score: 0` → trade blocked.
 
 ### 2. TX Simulation + Fuzzing Analyzer — Weight: 30%
-**Method:** eth_call → OKX cross-validation → 8-variant invariant fuzzer
+**Method:** eth_call → dual-RPC cross-validation → 8-variant invariant fuzzer
 
 Three-layer simulation:
-1. `eth_call` dry-run against X Layer RPC
-2. Independent cross-validation via OKX Security API's pre-execution scan — if results diverge, penalty applied
+1. `eth_call` dry-run against HashKey Chain RPC (primary endpoint)
+2. Independent cross-validation via second RPC endpoint — if results diverge, penalty applied
 3. 8-variant invariant fuzzer: zero-args, max-uint256, half/double/10x amounts, byte-flip, truncation — detects state-dependent revert traps that only manifest under specific calldata conditions
 
 **Detects:**
@@ -198,7 +196,7 @@ npx tsx src/cli.ts evaluate <tokenIn> <tokenOut> <amount> [options]
 
 Options:
   -u, --user <address>     Wallet address (default: 0x000...001)
-  -c, --chain <id>         Chain ID: 196 (mainnet) or 195 (testnet)
+  -c, --chain <id>         Chain ID: 177 (mainnet) or 133 (testnet)
   -t, --tx <hex>           Pre-built tx hex for simulation
   --threshold <score>      Custom safety threshold (default: 70)
 ```
@@ -229,7 +227,7 @@ Every Guardian command outputs **structured JSON on stdout**. Structured logs go
 {
   "evaluationId": "uuid-v4",
   "timestamp": "ISO-8601",
-  "chainId": 196,
+  "chainId": 177,
   "safetyScore": {
     "overall": 87,
     "tier": "MODERATE",
@@ -273,7 +271,7 @@ import { evaluateTrade } from "@guardian-protocol/skill";
 // In your trading loop:
 async function safeSwap(tokenIn: string, tokenOut: string, amount: string) {
   // Step 1: Guardian evaluation (mandatory, not optional)
-  const verdict = await evaluateTrade({ tokenIn, tokenOut, amount, chainId: 196 });
+  const verdict = await evaluateTrade({ tokenIn, tokenOut, amount, chainId: 177 });
 
   // Step 2: Hard gate — no bypass, no "try anyway"
   if (!verdict.isSafeToExecute) {
@@ -314,8 +312,8 @@ await evaluateTrade(request, {
 ## TESTING STATUS
 
 ```
-Total Tests:   72 / 72 passing ✅
-Test Suites:   5
+Total Tests:   76 / 76 passing ✅
+Test Suites:   6
 Test Runner:   Vitest 2.1
 Coverage:      Analyzers, scoring engine, fail-closed behavior,
                cross-analyzer correlations, confidence degradation
@@ -330,21 +328,21 @@ Notable adversarial tests:
 
 ## LIVE FIRE RESULTS
 
-Executed against X Layer Mainnet (Chain ID 196) — see `LIVE_FIRE_LOG.txt`:
+Executed against HashKey Chain Mainnet (Chain ID 177) — see `LIVE_FIRE_HASHKEY_LOG.txt`:
 
 ```
 Tests run:        3
 Protocol mode:    Fail-Closed
 Architecture:     4 analyzers, parallel execution, weighted scoring
-RPC redundancy:   3-endpoint round-robin (1500ms failover)
+RPC redundancy:   3-endpoint round-robin (500ms failover)
 State fuzzing:    8 invariant variants per simulation
 Cache:            LRU 60s TTL, 500 entries
-Target:           X Layer Mainnet (Chain ID 196)
+Target:           HashKey Chain Mainnet (Chain ID 177)
 
 Results:
-  ✅ Full pipeline evaluation: WOKB → USDC swap evaluated — all 4 analyzers ran, OKX DEX quote resolved pool address, tx simulation detected revert (expired deadline in test calldata)
-  ✅ Token-only scan: WOKB analyzed on mainnet, score 100, no flags
-  ✅ Unknown token: 0xDeadBeef scanned on mainnet, score 100 (OKX API returned no risk data — fail-closed enforced at pipeline level)
+  ✅ Full pipeline evaluation: WHSK → USDT swap evaluated — all 4 analyzers ran, real V3 pool resolved, tx simulation detected revert
+  ✅ Token-only scan: WHSK analyzed on mainnet, score 75, 1 flag (mint function)
+  ✅ Unknown token: 0xDeadBeef scanned on mainnet, score 0, fail-closed enforced
 ```
 
 ## SECURITY PROPERTIES

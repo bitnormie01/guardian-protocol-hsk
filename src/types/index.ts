@@ -5,4 +5,4 @@
 export * from "./input.js";
 export * from "./output.js";
 export * from "./internal.js";
-export * from "./okx-api.js";
+export * from "./hashkey-api.js";

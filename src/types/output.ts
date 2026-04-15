@@ -223,7 +223,7 @@ export interface GuardianEvaluationResponse {
       tokenOutDecimals: number;
       estimatedTradeUsd: number;
       poolAddress: Address | null;
-      contextSource: "caller" | "okx-dex" | "fallback";
+      contextSource: "caller" | "dex-api" | "fallback";
       hasQuoteData: boolean;
     };
   };

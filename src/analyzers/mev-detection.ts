@@ -122,7 +122,7 @@ export async function analyzeMEVRisk(
   tradeAmountUsd: number,
   userAddress: Address,
   proposedTxHex: HexString | null = null,
-  chainId: SupportedChainId = 196,
+  chainId: SupportedChainId = 177,
   thresholds: Partial<MEVDetectionThresholds> = {},
   baseSlippageBps: number = 500,
 ): Promise<AnalyzerResult> {

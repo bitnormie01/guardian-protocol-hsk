@@ -1,11 +1,31 @@
+# Dependencies
 node_modules/
+
+# Build output
 dist/
+
+# Foundry artifacts & cache
+artifacts-foundry/
+cache/
+out/
+
+# Environment
 .env
 .env.*
 !.env.example
+
+# Logs
 *.log
-coverage/
-*.tsbuildinfo
+
+# IDE & OS
 .vscode/
 .idea/
 .DS_Store
+*.tsbuildinfo
+
+# Test coverage
+coverage/
+
+# Frontend build (if any)
+frontend/.next/
+frontend/node_modules/

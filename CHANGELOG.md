@@ -6,13 +6,13 @@ All notable changes to Guardian Protocol are documented in this file.
 
 ### 🔒 Security
 - **CLI threshold bypass blocked** — `--threshold` now enforces minimum of 20; values below 20 are rejected with a structured JSON error. Prevents agents from bypassing Guardian's minimum security invariants
-- **Comprehensive input validation** added to all 3 CLI commands: address format (EVM 0x-prefixed), amount must be positive non-zero, tokenIn ≠ tokenOut, chainId must be 195 or 196, txHex must be 0x-prefixed hex
+- **Comprehensive input validation** added to all 3 CLI commands: address format (EVM 0x-prefixed), amount must be positive non-zero, tokenIn ≠ tokenOut, chainId must be 133 or 177, txHex must be 0x-prefixed hex
 - **Minimum threshold floor** cannot be bypassed via CLI flags; requires explicit env var override
 
 ### 🔧 Fixed
-- **OKX API v5→v6 type migration** — updated `OKXTokenSecurityData` to include granular fields (`isHoneypot`, `hasBlacklist`, `isMintable`, `isOpenSource`, `isProxy`, `holderCount`, `ownerAddress`). These can now be detected directly without GoPlus fallback
-- **72/72 test suite restored** from 59/72 — token-risk and tx-simulation fixtures rebuilt for OKX v6 schema (`action`/`riskItemDetail` instead of v5 `riskLevel`/`balanceChanges`)
-- **Slippage detection restored** — now reads eth_call `returnData` directly since OKX v6 no longer provides balance changes
+- **GoPlus API v5→v6 type migration** — updated `GoPlusTokenSecurityData` to include granular fields (`isHoneypot`, `hasBlacklist`, `isMintable`, `isOpenSource`, `isProxy`, `holderCount`, `ownerAddress`). These can now be detected directly without GoPlus fallback
+- **72/72 test suite restored** from 59/72 — token-risk and tx-simulation fixtures rebuilt for GoPlus v6 schema (`action`/`riskItemDetail` instead of v5 `riskLevel`/`balanceChanges`)
+- **Slippage detection restored** — now reads eth_call `returnData` directly since GoPlus v6 no longer provides balance changes
 - **Version sync** — CLI now reports `0.2.0` (was incorrectly reporting `0.1.0`)
 
 ---
@@ -31,14 +31,14 @@ All notable changes to Guardian Protocol are documented in this file.
 - Configurable thresholds: `minLiquidityDepthUsd`, `maxTickGapMultiplier`, `maxPriceDeviationRatio`, `liquidityAsymmetryThreshold`
 - Graceful degradation: failure returns score 60 (cautious, non-blocking)
 
-#### RPC Redundancy (`src/services/xlayer-rpc-client.ts`)
+#### RPC Redundancy (`src/services/hashkey-chain-rpc-client.ts`)
 - `RoundRobinRPCManager` class with 3+ endpoint support
-- **1500ms per-endpoint timeout** — X Layer RPC latency can exceed 500ms under load; 1500ms gives 4.5s worst-case across 3 endpoints while staying within the 10s simulation budget
+- **1500ms per-endpoint timeout** — HashKey Chain RPC latency can exceed 500ms under load; 1500ms gives 4.5s worst-case across 3 endpoints while staying within the 10s simulation budget
 - Health-based smart rotation: healthy endpoints tried first
 - Per-endpoint failure tracking with automatic demotion
 - Only throws if ALL endpoints fail (~4.5s worst-case)
 - New generic `readContract()` method for arbitrary on-chain reads
-- Configurable via `XLAYER_RPC_URL`, `XLAYER_RPC_URL_2`, `XLAYER_RPC_URL_3`
+- Configurable via `HASHKEY_RPC_URL`, `HASHKEY_RPC_URL_2`, `HASHKEY_RPC_URL_3`
 - Configurable at runtime via `GUARDIAN_RPC_ENDPOINT_TIMEOUT_MS` env var
 
 #### TX Simulation Fuzzing (`src/analyzers/tx-simulation.ts`)
@@ -92,12 +92,12 @@ All notable changes to Guardian Protocol are documented in this file.
 ## [0.1.0] — 2026-04-08 — Phase 1: Initial Release
 
 ### Added
-- Token Risk Analyzer — OKX Security API integration
-- TX Simulation Analyzer — eth_call simulation + OKX cross-validation
+- Token Risk Analyzer — GoPlus Security API integration
+- TX Simulation Analyzer — eth_call simulation + GoPlus cross-validation
 - MEV Detection Analyzer — sandwich risk + volatility + liquidity
 - Risk Scoring Engine — weighted aggregation + penalty cascade
 - CLI — 3 commands (evaluate, scan-token, simulate-tx)
 - Agent library — `evaluateTrade()`, `scanToken()`, `simulateTx()`
-- LRU caching (60s TTL, 500 entries) for OKX API calls
+- LRU caching (60s TTL, 500 entries) for GoPlus API calls
 - 50 unit tests across 4 suites
-- Live fire testing against X Layer Testnet
+- Live fire testing against HashKey Chain Testnet

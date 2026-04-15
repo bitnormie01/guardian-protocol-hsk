@@ -3,7 +3,7 @@
 // ==========================================================================
 //
 // These tests validate the token risk analyzer's logic WITHOUT hitting
-// the real OKX API or GoPlus. We mock both the OKXSecurityClient and
+// the real GoPlus API or GoPlus. We mock both the GoPlusSecurityClient and
 // the GoPlus enrichment module to return controlled data and verify:
 //
 //   1. Honeypots are flagged as CRITICAL with score 0
@@ -16,9 +16,9 @@
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { analyzeTokenRisk, analyzeTokenPairRisk } from "../../../src/analyzers/token-risk.js";
-import { OKXSecurityClient } from "../../../src/services/okx-security-client.js";
+import { GoPlusSecurityClient } from "../../../src/services/goplus-security-client.js";
 import { RiskFlagCode } from "../../../src/types/output.js";
-import type { OKXTokenSecurityData } from "../../../src/types/okx-api.js";
+import type { TokenSecurityData } from "../../../src/types/hashkey-api.js";
 import type { Address } from "../../../src/types/input.js";
 
 // ---------------------------------------------------------------------------
@@ -35,11 +35,11 @@ vi.mock("../../../src/services/goplus-enrichment.js", () => ({
 }));
 
 // ---------------------------------------------------------------------------
-// Mock XLayerRPCClient — return valid bytecode for all addresses by default
+// Mock HashKeyRPCClient — return valid bytecode for all addresses by default
 // ---------------------------------------------------------------------------
 
-vi.mock("../../../src/services/xlayer-rpc-client.js", () => ({
-  XLayerRPCClient: vi.fn().mockImplementation(() => ({
+vi.mock("../../../src/services/hashkey-rpc-client.js", () => ({
+  HashKeyRPCClient: vi.fn().mockImplementation(() => ({
     getRPCManager: vi.fn().mockReturnValue({
       execute: vi.fn().mockResolvedValue("0x608060405234801561001057600080fd5b50"), // Valid bytecode
     }),
@@ -47,12 +47,12 @@ vi.mock("../../../src/services/xlayer-rpc-client.js", () => ({
 }));
 
 // ---------------------------------------------------------------------------
-// Test Fixtures — Full OKX API v6 Schema
+// Test Fixtures — Full GoPlus API v6 Schema
 // ---------------------------------------------------------------------------
 
 /** A perfectly clean, safe token. */
-const CLEAN_TOKEN: OKXTokenSecurityData = {
-  chainId: "196",
+const CLEAN_TOKEN: TokenSecurityData = {
+  chainId: "177",
   tokenAddress: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
   isChainSupported: true,
   isRiskToken: false,
@@ -71,7 +71,7 @@ const CLEAN_TOKEN: OKXTokenSecurityData = {
 };
 
 /** A confirmed honeypot token. */
-const HONEYPOT_TOKEN: OKXTokenSecurityData = {
+const HONEYPOT_TOKEN: TokenSecurityData = {
   ...CLEAN_TOKEN,
   tokenName: "ScamCoin",
   tokenSymbol: "SCAM",
@@ -83,7 +83,7 @@ const HONEYPOT_TOKEN: OKXTokenSecurityData = {
 };
 
 /** A token with a blacklist function. */
-const BLACKLIST_TOKEN: OKXTokenSecurityData = {
+const BLACKLIST_TOKEN: TokenSecurityData = {
   ...CLEAN_TOKEN,
   tokenName: "FreezeToken",
   tokenSymbol: "FREEZE",
@@ -93,7 +93,7 @@ const BLACKLIST_TOKEN: OKXTokenSecurityData = {
 };
 
 /** A token with predatory taxes, mint function, and unverified source. */
-const HIGH_TAX_TOKEN: OKXTokenSecurityData = {
+const HIGH_TAX_TOKEN: TokenSecurityData = {
   ...CLEAN_TOKEN,
   tokenName: "TaxHeavy",
   tokenSymbol: "TAX",
@@ -107,7 +107,7 @@ const HIGH_TAX_TOKEN: OKXTokenSecurityData = {
 };
 
 /** A token with moderate, non-fatal risks: proxy, taxes, active owner. */
-const MODERATE_RISK_TOKEN: OKXTokenSecurityData = {
+const MODERATE_RISK_TOKEN: TokenSecurityData = {
   ...CLEAN_TOKEN,
   tokenName: "RiskyButNotFatal",
   tokenSymbol: "RISK",
@@ -125,19 +125,19 @@ const MODERATE_RISK_TOKEN: OKXTokenSecurityData = {
 
 const TEST_ADDRESS = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48" as Address;
 
-function createMockClient(returnData: OKXTokenSecurityData): OKXSecurityClient {
+function createMockClient(returnData: TokenSecurityData): GoPlusSecurityClient {
   const mock = {
     scanTokenRisk: vi.fn().mockResolvedValue(returnData),
     simulateTransaction: vi.fn(),
-  } as unknown as OKXSecurityClient;
+  } as unknown as GoPlusSecurityClient;
   return mock;
 }
 
-function createFailingClient(error: Error): OKXSecurityClient {
+function createFailingClient(error: Error): GoPlusSecurityClient {
   const mock = {
     scanTokenRisk: vi.fn().mockRejectedValue(error),
     simulateTransaction: vi.fn(),
-  } as unknown as OKXSecurityClient;
+  } as unknown as GoPlusSecurityClient;
   return mock;
 }
 
@@ -156,7 +156,7 @@ describe("Token Risk Analyzer", () => {
   describe("clean token", () => {
     it("should return score 100 with zero flags", async () => {
       const client = createMockClient(CLEAN_TOKEN);
-      const result = await analyzeTokenRisk(TEST_ADDRESS, 196, {}, client);
+      const result = await analyzeTokenRisk(TEST_ADDRESS, 177, {}, client);
 
       expect(result.analyzerName).toBe("token-risk-analyzer");
       expect(result.score).toBe(100);
@@ -177,7 +177,7 @@ describe("Token Risk Analyzer", () => {
   describe("honeypot detection", () => {
     it("should flag as CRITICAL and return score 0", async () => {
       const client = createMockClient(HONEYPOT_TOKEN);
-      const result = await analyzeTokenRisk(TEST_ADDRESS, 196, {}, client);
+      const result = await analyzeTokenRisk(TEST_ADDRESS, 177, {}, client);
 
       expect(result.score).toBe(0);
 
@@ -199,7 +199,7 @@ describe("Token Risk Analyzer", () => {
   describe("blacklist detection", () => {
     it("should flag as CRITICAL and return score 0", async () => {
       const client = createMockClient(BLACKLIST_TOKEN);
-      const result = await analyzeTokenRisk(TEST_ADDRESS, 196, {}, client);
+      const result = await analyzeTokenRisk(TEST_ADDRESS, 177, {}, client);
 
       expect(result.score).toBe(0);
 
@@ -221,7 +221,7 @@ describe("Token Risk Analyzer", () => {
   describe("high tax token", () => {
     it("should produce high-severity flags and a low score", async () => {
       const client = createMockClient(HIGH_TAX_TOKEN);
-      const result = await analyzeTokenRisk(TEST_ADDRESS, 196, {}, client);
+      const result = await analyzeTokenRisk(TEST_ADDRESS, 177, {}, client);
 
       // Multiple high flags: buy tax danger, sell tax danger, mintable, unverified
       const highFlags = result.flags.filter((f) => f.severity === "high");
@@ -251,7 +251,7 @@ describe("Token Risk Analyzer", () => {
   describe("moderate risk token", () => {
     it("should produce medium-severity flags with moderate score", async () => {
       const client = createMockClient(MODERATE_RISK_TOKEN);
-      const result = await analyzeTokenRisk(TEST_ADDRESS, 196, {}, client);
+      const result = await analyzeTokenRisk(TEST_ADDRESS, 177, {}, client);
 
       // Should have flags for: elevated taxes, proxy, ownership
       expect(result.flags.length).toBeGreaterThanOrEqual(3);
@@ -281,7 +281,7 @@ describe("Token Risk Analyzer", () => {
       });
 
       // With default thresholds (warning at 10%), 8% should NOT flag
-      const resultDefault = await analyzeTokenRisk(TEST_ADDRESS, 196, {}, client);
+      const resultDefault = await analyzeTokenRisk(TEST_ADDRESS, 177, {}, client);
       const taxFlagsDefault = resultDefault.flags.filter(
         (f) => f.code === RiskFlagCode.HIGH_TAX_TOKEN
       );
@@ -290,7 +290,7 @@ describe("Token Risk Analyzer", () => {
       // With custom threshold (warning at 5%), 8% SHOULD flag
       const resultStrict = await analyzeTokenRisk(
         TEST_ADDRESS,
-        196,
+        177,
         { sellTaxWarningPercent: 5 },
         client
       );
@@ -305,9 +305,9 @@ describe("Token Risk Analyzer", () => {
   // 7. API Failure — MUST Fail Closed (Score 0)
   // -----------------------------------------------------------------------
   describe("API failure — fail closed", () => {
-    it("should return score 0 when OKX API is unreachable", async () => {
+    it("should return score 0 when GoPlus API is unreachable", async () => {
       const client = createFailingClient(new Error("Network timeout"));
-      const result = await analyzeTokenRisk(TEST_ADDRESS, 196, {}, client);
+      const result = await analyzeTokenRisk(TEST_ADDRESS, 177, {}, client);
 
       // FAIL CLOSED: score must be 0
       expect(result.score).toBe(0);
@@ -340,7 +340,7 @@ describe("Token Risk Analyzer", () => {
         isMintable: true,
       });
 
-      const result = await analyzeTokenRisk(TEST_ADDRESS, 196, {}, client);
+      const result = await analyzeTokenRisk(TEST_ADDRESS, 177, {}, client);
 
       // First flag must be critical
       expect(result.flags[0]!.severity).toBe("critical");
@@ -365,12 +365,12 @@ describe("Token Risk Analyzer", () => {
           .mockResolvedValueOnce(CLEAN_TOKEN)
           .mockResolvedValueOnce(HONEYPOT_TOKEN),
         simulateTransaction: vi.fn(),
-      } as unknown as OKXSecurityClient;
+      } as unknown as GoPlusSecurityClient;
 
       const [tokenInResult, tokenOutResult] = await analyzeTokenPairRisk(
         "0xAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" as Address,
         "0xBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB" as Address,
-        196,
+        177,
         {},
         client
       );

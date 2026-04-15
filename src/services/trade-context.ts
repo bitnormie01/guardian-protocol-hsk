@@ -5,10 +5,10 @@ import type {
   SupportedChainId,
 } from "../types/input.js";
 import type { ResolvedTradeContext } from "../types/internal.js";
-import type { OKXDexQuoteData } from "../types/okx-api.js";
+import type { DexQuoteData } from "../types/hashkey-api.js";
 import type { OptimizedRouting } from "../types/output.js";
-import { XLayerRPCClient } from "./xlayer-rpc-client.js";
-import { OKXSecurityClient } from "./okx-security-client.js";
+import { HashKeyRPCClient } from "./hashkey-rpc-client.js";
+import { GoPlusSecurityClient } from "./goplus-security-client.js";
 import { GuardianError, ErrorCode } from "../utils/errors.js";
 import { logger } from "../utils/logger.js";
 
@@ -29,7 +29,8 @@ const ZERO_ADDRESS =
 const COMMON_V3_FEE_TIERS = [100, 500, 3000, 10000] as const;
 
 const UNISWAP_V3_FACTORY_BY_CHAIN: Partial<Record<SupportedChainId, Address>> = {
-  196: "0x4B2ab38DBF28D31D467aA8993f6c2585981D6804",
+  // HashKey Chain mainnet — verified live V3-compatible factory.
+  177: "0xD136e36610f35E0Cc3cAd40de858c151f2AA65D4" as Address,
 };
 
 function requireAmountRaw(request: GuardianEvaluationRequest): string {
@@ -57,7 +58,7 @@ function requireAmountRaw(request: GuardianEvaluationRequest): string {
 }
 
 async function readTokenDecimals(
-  rpcClient: XLayerRPCClient,
+  rpcClient: HashKeyRPCClient,
   tokenAddress: Address,
 ): Promise<number> {
   return rpcClient.readContract<number>({
@@ -78,13 +79,13 @@ function formatAmount(amountRaw: bigint, decimals: number): string {
 }
 
 function buildOptimizedRouting(
-  quote: OKXDexQuoteData,
+  quote: DexQuoteData,
   tokenOutDecimals: number,
   maxSlippageBps: number,
   routerAddress: Address | null,
 ): OptimizedRouting {
   return {
-    aggregator: "OKX DEX API",
+    aggregator: "DEX API",
     path: quote.dexRouterList.map((route) => ({
       poolAddress: null,
       protocol:
@@ -110,7 +111,7 @@ function buildOptimizedRouting(
 }
 
 async function resolvePoolAddress(
-  rpcClient: XLayerRPCClient,
+  rpcClient: HashKeyRPCClient,
   chainId: SupportedChainId,
   tokenIn: Address,
   tokenOut: Address,
@@ -173,18 +174,18 @@ export async function resolveTradeContext(
   request: GuardianEvaluationRequest,
   chainId: SupportedChainId,
   maxSlippageBps: number,
-  okxClient?: OKXSecurityClient,
-  rpcClient?: XLayerRPCClient,
+  goPlusClient?: GoPlusSecurityClient,
+  rpcClient?: HashKeyRPCClient,
 ): Promise<ResolvedTradeContext> {
   const amountRaw = requireAmountRaw(request);
   const amountRawBigInt = BigInt(amountRaw);
-  const okx = okxClient ?? new OKXSecurityClient();
-  const rpc = rpcClient ?? new XLayerRPCClient(chainId);
+  const goPlus = goPlusClient ?? new GoPlusSecurityClient();
+  const rpc = rpcClient ?? new HashKeyRPCClient(chainId);
 
-  let liveQuote: OKXDexQuoteData | null = null;
+  let liveQuote: DexQuoteData | null = null;
 
   try {
-    liveQuote = await okx.getDexQuote({
+    liveQuote = await goPlus.getDexQuote({
       chainId,
       fromTokenAddress: request.tokenIn,
       toTokenAddress: request.tokenOut,
@@ -195,7 +196,7 @@ export async function resolveTradeContext(
       priceImpactProtectionPercent: 90,
     });
   } catch (err) {
-    logger.warn("[trade-context] Failed to fetch OKX DEX quote; falling back", {
+    logger.warn("[trade-context] Failed to fetch DEX quote; falling back", {
       error: err instanceof Error ? err.message : String(err),
       tokenIn: request.tokenIn,
       tokenOut: request.tokenOut,
@@ -234,7 +235,7 @@ export async function resolveTradeContext(
     request.quoteContext !== undefined
       ? "caller"
       : liveQuote !== null
-        ? "okx-dex"
+        ? "dex-api"
         : "fallback";
 
   const expectedOutputRawString =

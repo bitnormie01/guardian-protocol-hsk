@@ -46,7 +46,7 @@ describe("MEV Detection Analyzer", () => {
         50, // $50 trade — negligible
         USER_ADDRESS,
         PROPOSED_TX,
-        196,
+        177,
       );
 
       expect(result.analyzerName).toBe("mev-detection-analyzer");
@@ -69,7 +69,7 @@ describe("MEV Detection Analyzer", () => {
         150_000,
         USER_ADDRESS,
         PROPOSED_TX,
-        196,
+        177,
       );
 
       const report = result.data as Record<string, unknown>;
@@ -90,7 +90,7 @@ describe("MEV Detection Analyzer", () => {
         5_000,
         USER_ADDRESS,
         PROPOSED_TX,
-        196,
+        177,
       );
 
       const report = result.data as Record<string, unknown>;
@@ -110,7 +110,7 @@ describe("MEV Detection Analyzer", () => {
         250_000,
         USER_ADDRESS,
         PROPOSED_TX,
-        196,
+        177,
       );
 
       const report = result.data as Record<string, unknown>;
@@ -130,7 +130,7 @@ describe("MEV Detection Analyzer", () => {
         500,
         USER_ADDRESS,
         PROPOSED_TX,
-        196,
+        177,
         { highSlippageRiskBps: 100, warningSlippageRiskBps: 50 },
       );
 
@@ -151,7 +151,7 @@ describe("MEV Detection Analyzer", () => {
         500,
         USER_ADDRESS,
         PROPOSED_TX,
-        196,
+        177,
       );
 
       const report = result.data as Record<string, unknown>;
@@ -171,7 +171,7 @@ describe("MEV Detection Analyzer", () => {
         50, // small trade
         USER_ADDRESS,
         PROPOSED_TX,
-        196,
+        177,
       );
 
       const largeTradeResult = await analyzeMEVRisk(
@@ -180,7 +180,7 @@ describe("MEV Detection Analyzer", () => {
         50_000, // large trade
         USER_ADDRESS,
         PROPOSED_TX,
-        196,
+        177,
       );
 
       const smallCap = (smallTradeResult.data as Record<string, unknown>)[
@@ -208,7 +208,7 @@ describe("MEV Detection Analyzer", () => {
         500_000,
         USER_ADDRESS,
         PROPOSED_TX,
-        196,
+        177,
       );
 
       expect(result.score).toBeGreaterThanOrEqual(0);
@@ -221,7 +221,7 @@ describe("MEV Detection Analyzer", () => {
         10, // Tiny trade
         USER_ADDRESS,
         PROPOSED_TX,
-        196,
+        177,
       );
 
       expect(result.score).toBeLessThanOrEqual(100);
@@ -239,7 +239,7 @@ describe("MEV Detection Analyzer", () => {
         1000,
         USER_ADDRESS,
         PROPOSED_TX,
-        196,
+        177,
       );
 
       const report = result.data as Record<string, unknown>;
@@ -266,7 +266,7 @@ describe("MEV Detection Analyzer", () => {
         200_000,
         USER_ADDRESS,
         PROPOSED_TX,
-        196,
+        177,
       );
 
       if (result.flags.length > 1) {
@@ -298,7 +298,7 @@ describe("MEV Detection Analyzer", () => {
         0.001, // Very small amount
         USER_ADDRESS,
         null,  // No proposed TX
-        196,
+        177,
       );
 
       expect(result.analyzerName).toBe("mev-detection-analyzer");
