@@ -128,18 +128,18 @@ async function resolvePoolAddress(
 
   const candidatePools = await Promise.all(
     COMMON_V3_FEE_TIERS.map(async (feeTier) => {
+      const poolAddress = await rpcClient.readContract<Address>({
+        address: factory,
+        abi: UNISWAP_V3_FACTORY_ABI,
+        functionName: "getPool",
+        args: [tokenIn, tokenOut, feeTier],
+      });
+
+      if (!poolAddress || poolAddress === ZERO_ADDRESS) {
+        return null;
+      }
+
       try {
-        const poolAddress = await rpcClient.readContract<Address>({
-          address: factory,
-          abi: UNISWAP_V3_FACTORY_ABI,
-          functionName: "getPool",
-          args: [tokenIn, tokenOut, feeTier],
-        });
-
-        if (!poolAddress || poolAddress === ZERO_ADDRESS) {
-          return null;
-        }
-
         const liquidity = await rpcClient.readContract<bigint>({
           address: poolAddress,
           abi: UNISWAP_V3_POOL_LIQUIDITY_ABI,
@@ -201,7 +201,7 @@ export async function resolveTradeContext(
       priceImpactProtectionPercent: 90,
     });
   } catch (err) {
-    logger.debug("[trade-context] Failed to fetch DEX quote; falling back", {
+    logger.warn("[trade-context] Failed to fetch DEX quote; falling back", {
       error: err instanceof Error ? err.message : String(err),
       tokenIn: request.tokenIn,
       tokenOut: request.tokenOut,

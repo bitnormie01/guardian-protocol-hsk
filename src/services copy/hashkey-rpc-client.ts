@@ -322,7 +322,7 @@ export class RoundRobinRPCManager {
 
         errors.push({ url, error: errorMsg });
 
-        logger.debug(
+        logger.warn(
           `[rpc-manager] Endpoint failed for ${opName}, rotating to next`,
           {
             failedUrl: url,

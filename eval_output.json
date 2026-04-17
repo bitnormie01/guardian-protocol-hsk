@@ -1,0 +1,74 @@
+{
+  "evaluationId": "7addfea9-268f-4412-8560-cfd7e10f29f2",
+  "timestamp": "2026-04-17T14:50:18.334Z",
+  "chainId": 177,
+  "safetyScore": {
+    "overall": 14,
+    "breakdown": {
+      "tokenRisk": 0,
+      "liquidityRisk": null,
+      "mevRisk": 85,
+      "ammPoolRisk": 75,
+      "walletRisk": null,
+      "txSimulation": 75
+    },
+    "tier": "CRITICAL"
+  },
+  "isSafeToExecute": false,
+  "flags": [
+    {
+      "code": "API_UNAVAILABLE",
+      "severity": "high",
+      "message": "[tokenIn] Token risk analysis failed for 0xB210D2120d57b758EE163cFfb43e73728c471Cf1: GoPlus API error: code=4012, msg=signature verification failure. Guardian Protocol fails CLOSED — this token is treated as unsafe until a successful scan can be completed. This protects the agent from trading a potentially malicious token when security data is unavailable.",
+      "source": "token-risk-analyzer"
+    },
+    {
+      "code": "AMM_THIN_LIQUIDITY",
+      "severity": "high",
+      "message": "Thin liquidity detected around current tick. Estimated depth: $0 (minimum required: $10,000). Trade size ($0) may experience excessive price impact. The liquidity may have been intentionally removed to create a manipulation opportunity.",
+      "source": "amm-pool-analyzer"
+    },
+    {
+      "code": "FRONTRUN_RISK_HIGH",
+      "severity": "medium",
+      "message": "Slippage tolerance is elevated (500 bps). Moderate risk of MEV extraction.",
+      "source": "mev-detection-analyzer"
+    }
+  ],
+  "optimizedRouting": null,
+  "meta": {
+    "guardianVersion": "0.2.1",
+    "evaluationDurationMs": 15535,
+    "analyzersRun": [
+      {
+        "name": "token-risk-analyzer",
+        "durationMs": 558,
+        "status": "error"
+      },
+      {
+        "name": "tx-simulation-analyzer",
+        "durationMs": 0,
+        "status": "success"
+      },
+      {
+        "name": "mev-detection-analyzer",
+        "durationMs": 0,
+        "status": "success"
+      },
+      {
+        "name": "amm-pool-analyzer",
+        "durationMs": 4134,
+        "status": "success"
+      }
+    ],
+    "tradeContext": {
+      "amountRaw": "10000000000000000",
+      "tokenInDecimals": 18,
+      "tokenOutDecimals": 6,
+      "estimatedTradeUsd": 0.01,
+      "poolAddress": "0xEB33d6666dd2359cB1BF6Ea6D72286Cc1b4a778A",
+      "contextSource": "fallback",
+      "hasQuoteData": false
+    }
+  }
+}
