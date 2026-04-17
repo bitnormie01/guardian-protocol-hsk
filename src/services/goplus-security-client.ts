@@ -238,7 +238,7 @@ export class GoPlusSecurityClient {
       Accept: "application/json",
     };
 
-    if (this.config.apiKey) {
+    if (this.config.apiKey && this.config.apiKey !== "your_goplus_api_key") {
       headers["Authorization"] = this.config.apiKey;
     }
 
