@@ -160,13 +160,7 @@ export async function analyzeMEVRisk(
     }
 
     if (dynamicSlippageCap.tradeImpactAdjustment > 0) {
-       flags.push(
-        createFlag(
-          RiskFlagCode.FRONTRUN_RISK_HIGH,
-          "low",
-          dynamicSlippageCap.explanation
-        )
-       );
+        logger.info(`[${ANALYZER_NAME}] ${dynamicSlippageCap.explanation}`);
     }
 
     let tradeImpactAssessment: MEVDetectionReport["tradeImpactAssessment"] = "negligible";

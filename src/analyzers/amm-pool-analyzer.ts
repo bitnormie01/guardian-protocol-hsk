@@ -414,6 +414,9 @@ function detectLiquidityManipulation(
     const severity: RiskSeverity =
       poolState.activeLiquidity === 0n ? "critical" : "high";
 
+    const depthStr = Math.round(estimatedDepthUsd) === 0 ? "(USD pricing unavailable)" : `$${Math.round(estimatedDepthUsd).toLocaleString()}`;
+    const tradeStr = Math.round(tradeAmountUsd) === 0 ? "(USD pricing unavailable)" : `$${Math.round(tradeAmountUsd).toLocaleString()}`;
+
     flags.push(
       createFlag(
         RiskFlagCode.AMM_THIN_LIQUIDITY,
@@ -425,9 +428,9 @@ function detectLiquidityManipulation(
               `moving the price to the next initialized tick. ` +
               `DO NOT execute this trade.`
           : `Thin liquidity detected around current tick. Estimated depth: ` +
-              `$${Math.round(estimatedDepthUsd).toLocaleString()} ` +
+              `${depthStr} ` +
               `(minimum required: $${config.minLiquidityDepthUsd.toLocaleString()}). ` +
-              `Trade size ($${Math.round(tradeAmountUsd).toLocaleString()}) may ` +
+              `Trade size (${tradeStr}) may ` +
               `experience excessive price impact. ` +
               `The liquidity may have been intentionally removed to create ` +
               `a manipulation opportunity.`,
