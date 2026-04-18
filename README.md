@@ -43,12 +43,16 @@ Built for **HashKey Chain Horizon Hackathon — AI Track**.
 | Deploy TX | `0xb078d8c9e7600388c8177e3618a118749b112ffda1cdc22ea2d3899001847f18` |
 
 **On-chain proof transactions:**
+- Phase 4 BLOCK verdict (fresh): [`0x16eaf37129bb35a1dc90e62a8f05e03c490f2f44b789df719327d791a03cb26a`](https://testnet-explorer.hsk.xyz/tx/0x16eaf37129bb35a1dc90e62a8f05e03c490f2f44b789df719327d791a03cb26a)
 - Blocked verdict: [`0x75a2f3911b9cde279d603497b1c1d3c6a35aee4a6da668fccd7f5a77fdac8799`](https://testnet-explorer.hsk.xyz/tx/0x75a2f3911b9cde279d603497b1c1d3c6a35aee4a6da668fccd7f5a77fdac8799)
 - Approved verdict: [`0x2b136c8e111909ce3ed1f0efacaf58e7569c7a871e9de178883b3d844d31b225`](https://testnet-explorer.hsk.xyz/tx/0x2b136c8e111909ce3ed1f0efacaf58e7569c7a871e9de178883b3d844d31b225)
 
 ---
 
 ## Quick Start
+
+**Requirements:**
+- Node.js ≥ 20.0.0
 
 ```bash
 npm install
@@ -65,11 +69,18 @@ npx tsx src/cli.ts evaluate \
   0xB210D2120d57b758EE163cFfb43e73728c471Cf1 \
   0xF1B50eD67A9e2CC94Ad3c477779E2d4cBfFf9029 \
   10000000000000000 \
-  --chain 177
+  --chain 177 \
+  --user 0xYourWalletAddress
 
 # Token-only risk scan
 npx tsx src/cli.ts scan-token \
   0xB210D2120d57b758EE163cFfb43e73728c471Cf1 \
+  --chain 177
+
+# Transaction pre-flight simulation
+npx tsx src/cli.ts simulate-tx \
+  0x095ea7b30000000000000000000000006b3... \
+  --user 0xYourWalletAddress \
   --chain 177
 ```
 
@@ -83,6 +94,9 @@ npx tsx src/cli.ts scan-token \
 | `GOPLUS_API_KEY` | No | Optional GoPlus API key for higher rate limits |
 | `DEPLOYER_KEY` | Deploy only | Private key for testnet contract deployment |
 | `GUARDIAN_SAFETY_THRESHOLD` | No | Minimum score to approve (default: 70) |
+| `GUARDIAN_MAX_SLIPPAGE_BPS` | No | Max acceptable slippage in basis points (default: 500) |
+| `GUARDIAN_TX_SIMULATION_TIMEOUT_MS` | No | Simulation timeout in ms (default: 10000) |
+| `GUARDIAN_RPC_ENDPOINT_TIMEOUT_MS`  | No | Per-endpoint failover budget in ms (default: 500) |
 
 ## Architecture
 
@@ -159,9 +173,11 @@ The contract stores `evaluationId`, `verdict`, `score`, and `timestamp` immutabl
 ║   HashKey Hackathon Submission                                        ║
 ╚═══════════════════════════════════════════════════════════════════════╝
 
-🔥 Full Pipeline: WHSK → USDT    → BLOCKED (score 0, 5 flags)
-🔥 Token Scan: WHSK              → APPROVED (score 75, 1 flag)
-🔥 Unknown Address               → BLOCKED (score 0, fail-closed)
+🟢 Small trade    WHSK → USDT (0.01 WHSK)        → APPROVED (score 72, 4 flags)
+🔴 Large trade    WHSK → USDT (10,000 WHSK)      → BLOCKED  (score 36, 4 flags)
+🔴 Unknown token  0x000...dEaD                    → BLOCKED  (score 0, fail-closed)
+🔴 RPC failure    All endpoints unreachable       → BLOCKED  (score 14, fail-closed)
+🔴 Oracle failure GoPlus API unreachable          → BLOCKED  (score 14, fail-closed)
 ```
 
 ## License

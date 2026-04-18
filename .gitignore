@@ -29,3 +29,15 @@ coverage/
 # Frontend build (if any)
 frontend/.next/
 frontend/node_modules/
+
+# Process and development artifacts
+HOTFIX-REPORT.md
+PHASE-*-REPORT.md
+SKILL.md
+LIVE_FIRE_*.txt
+MANUAL_TEST_*.txt
+eval_output.json
+local_err.txt
+local_run.txt
+run_*_out.json
+demo-evidence-raw-backup/
