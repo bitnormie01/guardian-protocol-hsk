@@ -41,3 +41,4 @@ local_err.txt
 local_run.txt
 run_*_out.json
 demo-evidence-raw-backup/
+idle_frontend/
