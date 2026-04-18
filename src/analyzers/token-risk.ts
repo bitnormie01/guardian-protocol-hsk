@@ -557,19 +557,26 @@ export async function analyzeTokenRisk(
     const rpcClient = new HashKeyRPCClient(chainId);
     
     let bytecode: string | null = null;
+    let bytecodeCheckFailed = false;
     try {
       bytecode = (await rpcClient.getRPCManager().execute(
         (client) => client.getBytecode({ address: tokenAddress as `0x${string}` }),
         "getBytecode"
       )) ?? null;
     } catch (err) {
-      logger.warn(`[${ANALYZER_NAME}] Failed to read bytecode, treating as non-contract`, {
+      // RPC failure (timeout/network) — we cannot confirm whether this is a contract.
+      // Do NOT treat as "not a contract" — that would be a false positive.
+      // Instead, skip the bytecode check and proceed to GoPlus API scan.
+      bytecodeCheckFailed = true;
+      logger.warn(`[${ANALYZER_NAME}] Bytecode check failed (RPC error), skipping — will proceed to GoPlus scan`, {
         tokenAddress,
         error: err instanceof Error ? err.message : String(err),
       });
     }
     
-    if (!bytecode || bytecode === "0x" || bytecode.length <= 2) {
+    // Only flag as non-contract if we SUCCESSFULLY read bytecode and it was empty.
+    // An RPC timeout is NOT evidence that the address lacks a contract.
+    if (!bytecodeCheckFailed && (!bytecode || bytecode === "0x" || bytecode.length <= 2)) {
       logger.error(`[${ANALYZER_NAME}] ⛔ NOT A CONTRACT`, {
         tokenAddress,
         chainId,

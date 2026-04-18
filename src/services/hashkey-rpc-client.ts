@@ -169,8 +169,9 @@ export interface RoundRobinConfig {
 }
 
 const DEFAULT_ROUND_ROBIN_CONFIG: RoundRobinConfig = {
-  perEndpointTimeoutMs: Number(
-    process.env["GUARDIAN_RPC_ENDPOINT_TIMEOUT_MS"] ?? "1500",
+  perEndpointTimeoutMs: Math.max(
+    5000,
+    Number(process.env["GUARDIAN_RPC_ENDPOINT_TIMEOUT_MS"] ?? "5000"),
   ),
   maxConsecutiveFailures: 3,
   healthWindowMs: 60_000,
