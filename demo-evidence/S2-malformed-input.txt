@@ -1,0 +1,66 @@
+# ============================================================================
+# S2 — Malformed Input (Input Validation Fail-Closed)
+# ============================================================================
+# Guardian Protocol — Fail-Closed Demo Scenario
+#
+# Three malformed inputs tested: invalid address, zero amount, unsupported
+# chain ID. Guardian's CLI input validation layer rejects all three BEFORE
+# evaluation begins. This is the first line of defense — the system never
+# reaches the analyzer pipeline with garbage inputs.
+#
+# Exit code 1 here is correct: the CLI itself failed to construct a valid
+# request (this is an infrastructure rejection, not a risk verdict).
+#
+# .env state: Production (all three HASHKEY_RPC_URL* pointing to real RPCs)
+# ============================================================================
+
+# --- Test A: Invalid address (non-hex) ---
+
+# CLI command:
+npx tsx src/cli.ts evaluate \
+  0xNOTVALID \
+  0xF1B50eD67A9e2CC94Ad3c477779E2d4cBfFf9029 \
+  10000000000000000 \
+  --chain 177
+
+# Output (exit code 1):
+{
+  "error": true,
+  "message": "Invalid tokenIn: \"0xNOTVALID\" is not a valid EVM address. Must be 0x-prefixed and 40 hex characters long.",
+  "command": "evaluate",
+  "timestamp": "2026-04-18T04:37:22.486Z"
+}
+
+# --- Test B: Zero trade amount ---
+
+# CLI command:
+npx tsx src/cli.ts evaluate \
+  0xB210D2120d57b758EE163cFfb43e73728c471Cf1 \
+  0xF1B50eD67A9e2CC94Ad3c477779E2d4cBfFf9029 \
+  0 \
+  --chain 177
+
+# Output (exit code 1):
+{
+  "error": true,
+  "message": "Invalid amount: \"0\". Trade amount must be a positive integer in token raw units. For example, 1 USDC (6 decimals) is \"1000000\".",
+  "command": "evaluate",
+  "timestamp": "2026-04-18T04:37:37.199Z"
+}
+
+# --- Test C: Unsupported chain ID ---
+
+# CLI command:
+npx tsx src/cli.ts evaluate \
+  0xB210D2120d57b758EE163cFfb43e73728c471Cf1 \
+  0xF1B50eD67A9e2CC94Ad3c477779E2d4cBfFf9029 \
+  10000000000000000 \
+  --chain 999
+
+# Output (exit code 1):
+{
+  "error": true,
+  "message": "Unsupported chainId: 999. Guardian Protocol supports HashKey Chain Mainnet (177) and HashKey Chain Testnet (133) only.",
+  "command": "evaluate",
+  "timestamp": "2026-04-18T04:37:46.856Z"
+}

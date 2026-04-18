@@ -1,0 +1,107 @@
+# ============================================================================
+# S1 — Unknown Address (Non-Contract EOA)
+# ============================================================================
+# Guardian Protocol — Fail-Closed Demo Scenario
+#
+# Passing a known burn address (0x...dEaD) as tokenIn. This address has no
+# bytecode deployed — it is an EOA, not a contract. Guardian reads the
+# bytecode via RPC, confirms it is empty, and immediately flags it as
+# UNVERIFIED_CONTRACT (critical) with score 0 → BLOCKED.
+#
+# .env state: Production (all three HASHKEY_RPC_URL* pointing to real RPCs)
+# ============================================================================
+
+# CLI command:
+npx tsx src/cli.ts evaluate \
+  0x000000000000000000000000000000000000dEaD \
+  0xF1B50eD67A9e2CC94Ad3c477779E2d4cBfFf9029 \
+  10000000000000000 \
+  --chain 177
+
+# Full CLI output (stdout, exit code 0):
+{
+  "evaluationId": "721672ac-fb48-4405-960f-08392365803b",
+  "timestamp": "2026-04-18T04:36:20.648Z",
+  "chainId": 177,
+  "safetyScore": {
+    "overall": 0,
+    "breakdown": {
+      "tokenRisk": 0,
+      "liquidityRisk": null,
+      "mevRisk": 85,
+      "ammPoolRisk": 0,
+      "walletRisk": null,
+      "txSimulation": 75
+    },
+    "tier": "CRITICAL"
+  },
+  "isSafeToExecute": false,
+  "flags": [
+    {
+      "code": "UNVERIFIED_CONTRACT",
+      "severity": "critical",
+      "message": "[tokenIn] FATAL: Address 0x000000000000000000000000000000000000dEaD is NOT a contract — it has no bytecode deployed. This could be an EOA (externally owned account), a non-existent address, or a malicious placeholder. Guardian Protocol fails CLOSED — DO NOT EXECUTE THIS TRADE.",
+      "source": "token-risk-analyzer"
+    },
+    {
+      "code": "MINT_FUNCTION_PRESENT",
+      "severity": "high",
+      "message": "Token 0xf1b50ed67a9e2cc94ad3c477779e2d4cbfff9029 has an active MINT function. The deployer can inflate token supply at any time, diluting holder value and enabling instant rug pulls.",
+      "source": "token-risk-analyzer"
+    },
+    {
+      "code": "AMM_READ_FAILED",
+      "severity": "high",
+      "message": "Guardian could not resolve a concentrated liquidity pool address for this token pair. AMM state cannot be verified, so the trade is treated as unsafe until routing/pool context is provided.",
+      "source": "amm-pool-analyzer"
+    },
+    {
+      "code": "OWNERSHIP_NOT_RENOUNCED",
+      "severity": "medium",
+      "message": "Token 0xf1b50ed67a9e2cc94ad3c477779e2d4cbfff9029 ownership has NOT been renounced. Owner (0x4200000000000000000000000000000000000010) retains admin privileges including the ability to modify fees, pause trading, or drain liquidity.",
+      "source": "token-risk-analyzer"
+    },
+    {
+      "code": "FRONTRUN_RISK_HIGH",
+      "severity": "medium",
+      "message": "Slippage tolerance is elevated (500 bps). Moderate risk of MEV extraction.",
+      "source": "mev-detection-analyzer"
+    }
+  ],
+  "optimizedRouting": null,
+  "meta": {
+    "guardianVersion": "0.2.1",
+    "evaluationDurationMs": 7660,
+    "analyzersRun": [
+      {
+        "name": "token-risk-analyzer",
+        "durationMs": 1051,
+        "status": "success"
+      },
+      {
+        "name": "tx-simulation-analyzer",
+        "durationMs": 0,
+        "status": "success"
+      },
+      {
+        "name": "mev-detection-analyzer",
+        "durationMs": 0,
+        "status": "success"
+      },
+      {
+        "name": "amm-pool-analyzer",
+        "durationMs": 0,
+        "status": "error"
+      }
+    ],
+    "tradeContext": {
+      "amountRaw": "10000000000000000",
+      "tokenInDecimals": 18,
+      "tokenOutDecimals": 6,
+      "estimatedTradeUsd": 0.01,
+      "poolAddress": null,
+      "contextSource": "fallback",
+      "hasQuoteData": false
+    }
+  }
+}

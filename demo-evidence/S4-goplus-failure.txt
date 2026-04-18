@@ -1,0 +1,103 @@
+# ============================================================================
+# S4 — GoPlus Unreachable (Sabotaged GoPlus Base URL)
+# ============================================================================
+# Guardian Protocol — Fail-Closed Demo Scenario
+#
+# GoPlus API base URL sabotaged to unreachable host (127.0.0.1:1) via
+# GOPLUS_BASE_URL env var. RPC endpoints are normal.
+#
+# The token-risk analyzer cannot reach GoPlus → fails with API_UNAVAILABLE
+# flag → token risk score drops to 0 → composite score 14 → BLOCKED.
+# Meanwhile, RPC-dependent analyzers (AMM, etc.) still function normally.
+# This demonstrates that each analyzer fails independently — a single
+# data source outage triggers fail-closed without crashing the pipeline.
+#
+# .env state:
+#   GOPLUS_BASE_URL=https://127.0.0.1:1  (sabotaged)
+#   HASHKEY_RPC_URL=https://mainnet.hsk.xyz  (normal)
+#   HASHKEY_RPC_URL_2=https://hashkey.drpc.org  (normal)
+#   HASHKEY_RPC_URL_3=https://rpc.hashkeychain.com  (normal)
+# ============================================================================
+
+# CLI command:
+npx tsx src/cli.ts evaluate \
+  0xB210D2120d57b758EE163cFfb43e73728c471Cf1 \
+  0xF1B50eD67A9e2CC94Ad3c477779E2d4cBfFf9029 \
+  10000000000000000 \
+  --chain 177
+
+# Full CLI output (stdout, exit code 0):
+{
+  "evaluationId": "020a57c4-93b7-4c2e-833a-5c3b153e7b7e",
+  "timestamp": "2026-04-18T04:40:41.962Z",
+  "chainId": 177,
+  "safetyScore": {
+    "overall": 14,
+    "breakdown": {
+      "tokenRisk": 0,
+      "liquidityRisk": null,
+      "mevRisk": 85,
+      "ammPoolRisk": 75,
+      "walletRisk": null,
+      "txSimulation": 75
+    },
+    "tier": "CRITICAL"
+  },
+  "isSafeToExecute": false,
+  "flags": [
+    {
+      "code": "API_UNAVAILABLE",
+      "severity": "high",
+      "message": "[tokenIn] Token risk analysis failed for 0xB210D2120d57b758EE163cFfb43e73728c471Cf1: GoPlus API request failed: fetch failed. Guardian Protocol fails CLOSED — this token is treated as unsafe until a successful scan can be completed. This protects the agent from trading a potentially malicious token when security data is unavailable.",
+      "source": "token-risk-analyzer"
+    },
+    {
+      "code": "AMM_THIN_LIQUIDITY",
+      "severity": "high",
+      "message": "Thin liquidity detected around current tick. Estimated depth: (USD pricing unavailable) (minimum required: $10,000). Trade size ((USD pricing unavailable)) may experience excessive price impact. The liquidity may have been intentionally removed to create a manipulation opportunity.",
+      "source": "amm-pool-analyzer"
+    },
+    {
+      "code": "FRONTRUN_RISK_HIGH",
+      "severity": "medium",
+      "message": "Slippage tolerance is elevated (500 bps). Moderate risk of MEV extraction.",
+      "source": "mev-detection-analyzer"
+    }
+  ],
+  "optimizedRouting": null,
+  "meta": {
+    "guardianVersion": "0.2.1",
+    "evaluationDurationMs": 25524,
+    "analyzersRun": [
+      {
+        "name": "token-risk-analyzer",
+        "durationMs": 626,
+        "status": "error"
+      },
+      {
+        "name": "tx-simulation-analyzer",
+        "durationMs": 0,
+        "status": "success"
+      },
+      {
+        "name": "mev-detection-analyzer",
+        "durationMs": 0,
+        "status": "success"
+      },
+      {
+        "name": "amm-pool-analyzer",
+        "durationMs": 13348,
+        "status": "success"
+      }
+    ],
+    "tradeContext": {
+      "amountRaw": "10000000000000000",
+      "tokenInDecimals": 18,
+      "tokenOutDecimals": 6,
+      "estimatedTradeUsd": 0.01,
+      "poolAddress": "0xEB33d6666dd2359cB1BF6Ea6D72286Cc1b4a778A",
+      "contextSource": "fallback",
+      "hasQuoteData": false
+    }
+  }
+}
