@@ -22,6 +22,32 @@ Built for **HashKey Chain Horizon Hackathon — AI Track**.
 
 ---
 
+## Why This Exists
+
+Autonomous AI agents are starting to execute on-chain transactions without human review. A trading bot that can swap tokens in milliseconds will not pause to read a warning banner. Existing security tools are built for humans: they surface risk indicators and expect someone to make a judgment call. Agents don't make judgment calls. They execute. Guardian Protocol closes that gap by returning a single machine-readable boolean verdict. If the score is below threshold, or any analyzer fails, the answer is BLOCK. There is no "proceed at your own risk" mode. This fail-closed design fits HashKey Chain specifically because it is a compliance-native network where auditability and fail-safe behavior are requirements, not nice-to-haves.
+
+## Live Fire Evidence
+
+```
+╔═══════════════════════════════════════════════════════════════════════╗
+║   🛡️  GUARDIAN PROTOCOL — LIVE FIRE TEST                              ║
+║   Target:  HashKey Chain Mainnet (Chain ID 177)                       ║
+║   Engine:  4-Analyzer Parallel Architecture                           ║
+║   Mode:    Fail-Closed Security Middleware                            ║
+║   HashKey Hackathon Submission                                        ║
+╚═══════════════════════════════════════════════════════════════════════╝
+
+🟢 Small trade    WHSK → USDT (0.01 WHSK)        → APPROVED (score 72, 4 flags)
+🔴 Large trade    WHSK → USDT (10,000 WHSK)      → BLOCKED  (score 36, 4 flags)
+🔴 Unknown token  0x000...dEaD                    → BLOCKED  (score 0, fail-closed)
+🔴 RPC failure    All endpoints unreachable       → BLOCKED  (score 14, fail-closed)
+🔴 Oracle failure GoPlus API unreachable          → BLOCKED  (score 14, fail-closed)
+```
+
+Raw CLI captures and on-chain proof details for each scenario are in [`demo-evidence/`](./demo-evidence/).
+
+---
+
 ## Live Deployment
 
 ### HashKey Chain Mainnet (177)
@@ -58,7 +84,7 @@ Built for **HashKey Chain Horizon Hackathon — AI Track**.
 npm install
 cp .env.example .env
 npm test          # 76/76 tests
-npm run live-fire # Live evaluation against HashKey Chain mainnet
+npm run live-fire # End-to-end evaluation against HashKey Chain testnet (chain 133)
 ```
 
 ## CLI Usage
@@ -70,7 +96,7 @@ npx tsx src/cli.ts evaluate \
   0xF1B50eD67A9e2CC94Ad3c477779E2d4cBfFf9029 \
   10000000000000000 \
   --chain 177 \
-  --user 0xYourWalletAddress
+  --user 0xYourWalletAddress  # optional — defaults to 0x0...001; enables wallet-risk analysis when provided
 
 # Token-only risk scan
 npx tsx src/cli.ts scan-token \
@@ -96,7 +122,7 @@ npx tsx src/cli.ts simulate-tx \
 | `GUARDIAN_SAFETY_THRESHOLD` | No | Minimum score to approve (default: 70) |
 | `GUARDIAN_MAX_SLIPPAGE_BPS` | No | Max acceptable slippage in basis points (default: 500) |
 | `GUARDIAN_TX_SIMULATION_TIMEOUT_MS` | No | Simulation timeout in ms (default: 10000) |
-| `GUARDIAN_RPC_ENDPOINT_TIMEOUT_MS`  | No | Per-endpoint failover budget in ms (default: 500) |
+| `GUARDIAN_RPC_ENDPOINT_TIMEOUT_MS`  | No | Per-endpoint timeout in ms (default: 5000; enforced floor of 5000ms) |
 
 ## Architecture
 
@@ -160,24 +186,6 @@ The contract stores `evaluationId`, `verdict`, `score`, and `timestamp` immutabl
 
  Test Files  6 passed (6)
       Tests  76 passed (76)
-```
-
-## Live Fire Evidence
-
-```
-╔═══════════════════════════════════════════════════════════════════════╗
-║   🛡️  GUARDIAN PROTOCOL — LIVE FIRE TEST                              ║
-║   Target:  HashKey Chain Mainnet (Chain ID 177)                       ║
-║   Engine:  4-Analyzer Parallel Architecture                           ║
-║   Mode:    Fail-Closed Security Middleware                            ║
-║   HashKey Hackathon Submission                                        ║
-╚═══════════════════════════════════════════════════════════════════════╝
-
-🟢 Small trade    WHSK → USDT (0.01 WHSK)        → APPROVED (score 72, 4 flags)
-🔴 Large trade    WHSK → USDT (10,000 WHSK)      → BLOCKED  (score 36, 4 flags)
-🔴 Unknown token  0x000...dEaD                    → BLOCKED  (score 0, fail-closed)
-🔴 RPC failure    All endpoints unreachable       → BLOCKED  (score 14, fail-closed)
-🔴 Oracle failure GoPlus API unreachable          → BLOCKED  (score 14, fail-closed)
 ```
 
 ## License
