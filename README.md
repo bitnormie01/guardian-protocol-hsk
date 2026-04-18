@@ -24,7 +24,7 @@ Built for **HashKey Chain Horizon Hackathon — AI Track**.
 
 ## Why This Exists
 
-Autonomous AI agents are starting to execute on-chain transactions without human review. A trading bot that can swap tokens in milliseconds will not pause to read a warning banner. Existing security tools are built for humans: they surface risk indicators and expect someone to make a judgment call. Agents don't make judgment calls. They execute. Guardian Protocol closes that gap by returning a single machine-readable boolean verdict. If the score is below threshold, or any analyzer fails, the answer is BLOCK. There is no "proceed at your own risk" mode. This fail-closed design fits HashKey Chain specifically because it is a compliance-native network where auditability and fail-safe behavior are requirements, not nice-to-haves.
+Autonomous AI agents are starting to execute on-chain transactions without human review. A trading bot that can swap tokens in milliseconds will not pause to read a warning banner. Existing security tools are built for humans: they surface risk indicators and expect someone to make a judgment call. Agents don't make judgment calls. They execute. Guardian Protocol closes that gap by returning a structured verdict before the trade executes. Four analyzers run in parallel — token risk, transaction simulation, MEV exposure, AMM pool health — and produce a weighted score. If the score is below threshold, or any analyzer cannot complete, the verdict is BLOCK. No "proceed at your own risk" path. This fail-closed design fits HashKey Chain specifically because it is a compliance-native network where auditability and fail-safe behavior are requirements, not nice-to-haves.
 
 ## Live Fire Evidence
 
