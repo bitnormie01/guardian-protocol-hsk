@@ -214,7 +214,7 @@ export async function analyzeMEVRisk(
     return {
       analyzerName: ANALYZER_NAME,
       flags: [createFlag(RiskFlagCode.FRONTRUN_RISK_HIGH, "high", errorMessage)],
-      score: 20,
+      score: 0,
       durationMs,
       data: { error: true, errorMessage, recommendMevProtection: true },
     };
