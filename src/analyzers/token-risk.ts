@@ -555,7 +555,7 @@ export async function analyzeTokenRisk(
     // Step 0: Verify the address is actually a contract
     // ------------------------------------------------------------------
     const rpcClient = new HashKeyRPCClient(chainId);
-    
+
     let bytecode: string | null = null;
     let bytecodeCheckFailed = false;
     try {
@@ -573,7 +573,7 @@ export async function analyzeTokenRisk(
         error: err instanceof Error ? err.message : String(err),
       });
     }
-    
+
     // Only flag as non-contract if we SUCCESSFULLY read bytecode and it was empty.
     // An RPC timeout is NOT evidence that the address lacks a contract.
     if (!bytecodeCheckFailed && (!bytecode || bytecode === "0x" || bytecode.length <= 2)) {
@@ -611,7 +611,7 @@ export async function analyzeTokenRisk(
 
     logger.debug(`[${ANALYZER_NAME}] Contract bytecode verified`, {
       tokenAddress,
-      bytecodeLength: bytecode.length,
+      bytecodeLength: bytecode?.length ?? 0,
     });
 
     // ------------------------------------------------------------------
@@ -739,7 +739,7 @@ export async function analyzeTokenRisk(
       durationMs,
     });
 
-    const isTokenNotFound = 
+    const isTokenNotFound =
       (err instanceof GuardianError && err.code === ErrorCode.TOKEN_NOT_FOUND) ||
       errorMessage.includes("404") ||
       errorMessage.toLowerCase().includes("not found") ||
@@ -751,10 +751,10 @@ export async function analyzeTokenRisk(
       message: isTokenNotFound
         ? `Token ${tokenAddress} is unknown or unindexed. Guardian Protocol fails CLOSED — this non-existent token is treated as unsafe to protect against newly deployed or malicious contracts.`
         : `Token risk analysis failed for ${tokenAddress}: ${errorMessage}. ` +
-          `Guardian Protocol fails CLOSED — this token is treated as unsafe ` +
-          `until a successful scan can be completed. This protects the agent ` +
-          `from trading a potentially malicious token when security data is ` +
-          `unavailable.`,
+        `Guardian Protocol fails CLOSED — this token is treated as unsafe ` +
+        `until a successful scan can be completed. This protects the agent ` +
+        `from trading a potentially malicious token when security data is ` +
+        `unavailable.`,
       source: ANALYZER_NAME,
     };
 

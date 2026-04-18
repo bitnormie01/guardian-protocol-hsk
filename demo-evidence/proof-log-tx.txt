@@ -1,0 +1,90 @@
+# ============================================================================
+# On-Chain Proof Log — GP-2 BLOCK Verdict
+# ============================================================================
+# Guardian Protocol — HashKey Chain Testnet (Chain ID 133)
+#
+# A GP-2 BLOCK verdict (score 36, 10,000 WHSK trade) was logged immutably
+# on-chain to the GuardianProofLogger contract. The record was verified
+# via a getEvaluation() read call immediately after the transaction.
+# ============================================================================
+
+# CLI command:
+npx tsx scripts/log-proof.ts \
+  --contract 0x7384cbB4dC7dE54d49DdA4E44731003413D17D7F \
+  --evaluation-id ba75fce8-8612-4df1-b3ea-3b3b38a32663 \
+  --score 36 \
+  --safe false \
+  --chain 133
+
+# ---- Transaction Details ----
+
+Transaction Hash:  0x16eaf37129bb35a1dc90e62a8f05e03c490f2f44b789df719327d791a03cb26a
+Block Number:      26654628
+Gas Used:          93005
+Status:            SUCCESS
+Timestamp:         2026-04-18T07:05:12.000Z
+
+Explorer Link:     https://testnet-explorer.hsk.xyz/tx/0x16eaf37129bb35a1dc90e62a8f05e03c490f2f44b789df719327d791a03cb26a
+
+# ---- Evaluation Details ----
+
+Evaluation ID:     ba75fce8-8612-4df1-b3ea-3b3b38a32663
+Evaluation Hash:   0xa5a6b485623fb3e9bb53225ac38d44576b3ddf8e4313d65ea3aa7f1f3660bdbc
+Score:             36
+Verdict:           BLOCK (isSafeToExecute: false)
+
+# ---- Contract Details ----
+
+Contract:          0x7384cbB4dC7dE54d49DdA4E44731003413D17D7F
+Chain:             HashKey Chain Testnet (133)
+RPC:               https://testnet.hsk.xyz
+Signer/Owner:      0x2B6E71C59f571969Ae9C32373aa4Ce48054cbF27
+
+# ---- On-Chain Verification ----
+
+getEvaluation(0xa5a6b485623fb3e9bb53225ac38d44576b3ddf8e4313d65ea3aa7f1f3660bdbc):
+  verdict:    false (BLOCK)
+  score:      36
+  timestamp:  1776495912 (2026-04-18T07:05:12.000Z)
+  exists:     true
+
+Verification:  PASSED — on-chain data matches submitted values.
+
+# ---- Full Script Output ----
+
+╔═══════════════════════════════════════════════════════════╗
+║  🛡️  Guardian Protocol — On-Chain Proof Logger            ║
+╚═══════════════════════════════════════════════════════════╝
+
+  Chain:          HashKey Testnet (133)
+  RPC:            https://testnet.hsk.xyz
+  Contract:       0x7384cbB4dC7dE54d49DdA4E44731003413D17D7F
+  Signer:         0x2B6E71C59f571969Ae9C32373aa4Ce48054cbF27
+  Evaluation ID:  ba75fce8-8612-4df1-b3ea-3b3b38a32663
+  Eval Hash:      0xa5a6b485623fb3e9bb53225ac38d44576b3ddf8e4313d65ea3aa7f1f3660bdbc
+  Score:          36
+  Verdict:        BLOCK
+
+  Balance:        0.199985111037819621 HSK
+  Contract Owner: 0x2B6E71C59f571969Ae9C32373aa4Ce48054cbF27
+  ✅ Signer matches contract owner
+
+  📝 Sending logEvaluation transaction...
+  TX Hash:        0x16eaf37129bb35a1dc90e62a8f05e03c490f2f44b789df719327d791a03cb26a
+  ⏳ Waiting for confirmation...
+  Block Number:   26654628
+  Gas Used:       93005
+  Status:         ✅ SUCCESS
+  Explorer:       https://testnet-explorer.hsk.xyz/tx/0x16eaf37129bb35a1dc90e62a8f05e03c490f2f44b789df719327d791a03cb26a
+
+  🔍 Verifying on-chain data...
+  On-Chain Verdict:   BLOCK
+  On-Chain Score:     36
+  On-Chain Timestamp: 1776495912 (2026-04-18T07:05:12.000Z)
+  Record Exists:      true
+
+  ✅ On-chain verification PASSED — logged data matches submitted values.
+
+╔═══════════════════════════════════════════════════════════╗
+║  ✅ Proof logged and verified successfully!               ║
+╚═══════════════════════════════════════════════════════════╝

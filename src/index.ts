@@ -186,13 +186,76 @@ export async function evaluateTrade(
     callerAgentId: request.callerAgentId ?? "anonymous",
   });
 
-  const resolvedTradeContext = await resolveTradeContext(
-    request,
-    chainId,
-    request.maxSlippageBps ??
-      resolvedConfig.txSimulation.maxSlippageBps ??
-      500,
-  );
+  let resolvedTradeContext;
+  try {
+    resolvedTradeContext = await resolveTradeContext(
+      request,
+      chainId,
+      request.maxSlippageBps ??
+        resolvedConfig.txSimulation.maxSlippageBps ??
+        500,
+    );
+  } catch (err) {
+    const errorMsg = err instanceof Error ? err.message : String(err);
+    logger.error("[orchestrator] Trade context resolution failed", {
+      evaluationId,
+      error: errorMsg,
+    });
+
+    const blockResponse: GuardianEvaluationResponse = {
+      evaluationId,
+      timestamp: new Date().toISOString(),
+      chainId,
+      safetyScore: {
+        overall: 0,
+        breakdown: {
+          tokenRisk: 0,
+          liquidityRisk: null,
+          mevRisk: 0,
+          ammPoolRisk: 0,
+          walletRisk: null,
+          txSimulation: 0,
+        },
+        tier: "CRITICAL",
+      },
+      isSafeToExecute: false,
+      flags: [
+        {
+          code: RiskFlagCode.API_UNAVAILABLE,
+          severity: "critical",
+          message:
+            "Trade context resolution failed — RPC unavailable or tokens " +
+            "unreadable. Fail-closed by design.",
+          source: "orchestrator",
+        },
+      ],
+      optimizedRouting: null,
+      meta: {
+        guardianVersion: resolvedConfig.version,
+        evaluationDurationMs: Math.round(performance.now() - pipelineStart),
+        analyzersRun: [],
+        tradeContext: {
+          amountRaw: request.amountRaw ?? request.amount ?? "0",
+          tokenInDecimals: request.tokenInDecimals ?? 18,
+          tokenOutDecimals: request.tokenOutDecimals ?? 18,
+          estimatedTradeUsd: 0,
+          poolAddress: null,
+          contextSource: "fallback",
+          hasQuoteData: false,
+        },
+      },
+    };
+
+    logger.info(
+      "[orchestrator] ⛔ VERDICT: BLOCKED — Score: 0/100 (CRITICAL)",
+      {
+        evaluationId,
+        reason: "Trade context resolution failed",
+      },
+    );
+
+    return blockResponse;
+  }
 
   logger.info("[orchestrator] Trade context resolved", {
     amountRaw: resolvedTradeContext.amountRaw,
@@ -249,7 +312,7 @@ export async function evaluateTrade(
         if (!request.proposedTxHex) {
           logger.info(
             "[orchestrator] No proposedTxHex — skipping simulation, " +
-              "returning neutral score",
+            "returning neutral score",
           );
           return {
             analyzerName: "tx-simulation-analyzer",
@@ -271,12 +334,12 @@ export async function evaluateTrade(
           request.proposedTxHex,
           request.userAddress,
           resolvedTradeContext.targetAddress ??
-            (() => {
-              throw new GuardianError(
-                ErrorCode.ANALYZER_ERROR,
-                "proposedTxHex requires proposedTxTarget or quoteContext.routerAddress for accurate simulation",
-              );
-            })(),
+          (() => {
+            throw new GuardianError(
+              ErrorCode.ANALYZER_ERROR,
+              "proposedTxHex requires proposedTxTarget or quoteContext.routerAddress for accurate simulation",
+            );
+          })(),
           request.tokenOut,
           resolvedTradeContext.expectedOutputRaw,
           resolvedTradeContext.tokenOutDecimals,
@@ -419,7 +482,7 @@ export async function evaluateTrade(
 
   logger.info(
     `[orchestrator] ${verdictEmoji} VERDICT: ${verdictWord} — ` +
-      `Score: ${safetyScore.overall}/100 (${safetyScore.tier})`,
+    `Score: ${safetyScore.overall}/100 (${safetyScore.tier})`,
     {
       evaluationId,
       score: safetyScore.overall,

@@ -345,7 +345,7 @@ export class RoundRobinRPCManager {
     throw new GuardianError(
       ErrorCode.API_ERROR,
       `All ${orderedEndpoints.length} HashKey Chain RPC endpoints failed for ` +
-        `operation "${opName}". Errors: ${errors.map((e) => `[${e.url}] ${e.error}`).join(" | ")}`,
+      `operation "${opName}". Errors: ${errors.map((e) => `[${e.url}] ${e.error}`).join(" | ")}`,
     );
   }
 
@@ -496,7 +496,10 @@ export class HashKeyRPCClient {
     const defaultEndpoints =
       chainId === 177 ? DEFAULT_MAINNET_ENDPOINTS : DEFAULT_TESTNET_ENDPOINTS;
 
-    // Build endpoint list: user overrides take priority, then env vars, then defaults
+    // Build endpoint list: user overrides take priority, then env vars, then defaults.
+    // CRITICAL: if the user has configured env vars, do NOT backfill with
+    // hardcoded URLs. Doing so silently bypasses fail-closed behaviour
+    // when the user intentionally (or accidentally) misconfigures RPCs.
     const endpoints: string[] = [];
 
     if (rpcUrlOverride) {
@@ -519,15 +522,13 @@ export class HashKeyRPCClient {
       }
     }
 
-    // Fill with defaults if we don't have at least 3
-    for (const def of defaultEndpoints) {
-      if (endpoints.length >= 3) break;
-      if (!endpoints.includes(def)) endpoints.push(def);
-    }
-
-    // Ensure at least 1 endpoint exists
+    // Only fall back to hardcoded defaults when NO endpoints were configured
+    // at all (fresh install with no .env). Once the user sets any
+    // HASHKEY_RPC_URL* env var, they own the endpoint list entirely.
     if (endpoints.length === 0) {
-      endpoints.push(defaultEndpoints[0]!);
+      for (const def of defaultEndpoints) {
+        if (!endpoints.includes(def)) endpoints.push(def);
+      }
     }
 
     this.rpcManager = new RoundRobinRPCManager(chain, endpoints);
@@ -743,8 +744,7 @@ export class HashKeyRPCClient {
     } catch (err) {
       throw new GuardianError(
         ErrorCode.ANALYZER_ERROR,
-        `Failed to read token balance for ${tokenAddress} at block ${pinnedBlock}: ${
-          err instanceof Error ? err.message : String(err)
+        `Failed to read token balance for ${tokenAddress} at block ${pinnedBlock}: ${err instanceof Error ? err.message : String(err)
         }`,
         { tokenAddress, walletAddress, blockNumber: pinnedBlock.toString() },
       );
@@ -777,8 +777,7 @@ export class HashKeyRPCClient {
     } catch (err) {
       throw new GuardianError(
         ErrorCode.ANALYZER_ERROR,
-        `Failed to read native balance for ${walletAddress}: ${
-          err instanceof Error ? err.message : String(err)
+        `Failed to read native balance for ${walletAddress}: ${err instanceof Error ? err.message : String(err)
         }`,
       );
     }
