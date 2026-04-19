@@ -3,7 +3,7 @@
 [![Built for HashKey Chain Horizon Hackathon — AI Track](https://img.shields.io/badge/HashKey_Horizon-AI_Track-FF6B35?style=for-the-badge)](https://dorahacks.io)
 [![HashKey Chain](https://img.shields.io/badge/HashKey_Chain-177_Mainnet-0EA5E9?style=for-the-badge)](https://hashkey.blockscout.com)
 [![HashKey Testnet](https://img.shields.io/badge/HashKey_Testnet-133-14B8A6?style=for-the-badge)](https://testnet-explorer.hsk.xyz)
-[![Tests](https://img.shields.io/badge/Tests-76%2F76_Passing-22C55E?style=for-the-badge)](#test-status)
+[![Tests](https://img.shields.io/badge/Tests-83%2F83_Passing-22C55E?style=for-the-badge)](#test-status)
 
 > **Fail-closed AI security reasoning layer that blocks dangerous trades before autonomous agents execute them on HashKey Chain.**
 
@@ -83,7 +83,7 @@ Raw CLI captures and on-chain proof details for each scenario are in [`demo-evid
 ```bash
 npm install
 cp .env.example .env
-npm test          # 76/76 tests
+npm test          # 83/83 tests
 npm run live-fire # End-to-end evaluation against HashKey Chain testnet (chain 133)
 ```
 
@@ -180,12 +180,12 @@ The contract stores `evaluationId`, `verdict`, `score`, and `timestamp` immutabl
  ✓ tests/unit/analyzers/amm-pool-analyzer.test.ts    (13 tests)
  ✓ tests/unit/analyzers/mev-detection.test.ts        (12 tests)
  ✓ tests/unit/analyzers/token-risk.test.ts           (9 tests)
- ✓ tests/unit/analyzers/tx-simulation.test.ts        (13 tests)
+ ✓ tests/unit/analyzers/tx-simulation.test.ts        (20 tests)
  ✓ tests/unit/scoring/risk-engine.test.ts            (27 tests)
  ✓ tests/unit/services/trade-context.test.ts         (2 tests)
 
  Test Files  6 passed (6)
-      Tests  76 passed (76)
+      Tests  83 passed (83)
 ```
 
 ## License

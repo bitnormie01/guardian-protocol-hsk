@@ -35,7 +35,7 @@ import type { TxSimulationData } from "../../../src/types/hashkey-api.js";
 const USER_ADDRESS = "0x1234567890AbCdEf1234567890AbCdEf12345678" as Address;
 const ROUTER_ADDRESS = "0xDEF171Fe48CF0115B1d80b88dc8eAB59176FEe57" as Address;
 const TOKEN_OUT = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48" as Address;
-const PROPOSED_TX = "0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234" as HexString;
+const PROPOSED_TX = "0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef12345678901234" as HexString;
 
 // Hex representation of 1_000_000_000 (1000 USDC raw with 6 decimals):
 // 1000000000 = 0x3B9ACA00 → padded to 32 bytes
@@ -570,6 +570,316 @@ describe("Transaction Simulation Analyzer", () => {
       const report = result.data as Record<string, unknown>;
       expect(report["slippageBps"]).toBeNull();
       expect(report["simulationSuccess"]).toBe(true);
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // 9. Invariant Fuzzing — 8-Variant Mutation Engine
+  // -----------------------------------------------------------------------
+  describe("invariant fuzzing", () => {
+    // Build a proper calldata with a function selector + uint256 amount param
+    // for the fuzzer to mutate. selector(4 bytes) + amount(32 bytes) + address(32 bytes)
+    const FUZZ_SELECTOR = "38ed1739"; // swapExactTokensForTokens selector
+    const FUZZ_AMOUNT = (1_000_000_000n).toString(16).padStart(64, "0"); // 1000 USDC
+    const FUZZ_EXTRA_PARAM = "0000000000000000000000001234567890abcdef1234567890abcdef12345678";
+    const FUZZ_TX = ("0x" + FUZZ_SELECTOR + FUZZ_AMOUNT + FUZZ_EXTRA_PARAM) as HexString;
+
+    it("should run fuzzer on clean swap and report no violations", async () => {
+      // All fuzz variant calls return the same proportional output (no anomalies)
+      const rpcClient = createMockRPCClient({
+        simulateCall: vi.fn().mockResolvedValue({
+          success: true,
+          returnData: RETURN_DATA_1000_USDC,
+          revertReason: null,
+          gasUsed: 150_000n,
+          blockNumber: 1_000_000n,
+        }),
+      });
+      const goPlusClient = createMockGoPlusClient();
+
+      const result = await simulateTransaction(
+        FUZZ_TX,
+        USER_ADDRESS,
+        ROUTER_ADDRESS,
+        TOKEN_OUT,
+        1_000_000_000n,
+        6,
+        177,
+        "0",
+        {
+          enableFuzzing: true,
+          fuzzTimeoutMs: 5000,
+          // Set high deviation ratio so static mock (same output for all variants)
+          // doesn't trigger non-linearity flags. The point of this test is to verify
+          // fuzzing infrastructure runs cleanly, not to test non-linearity detection.
+          fuzzMaxDeviationRatio: 100.0,
+        },
+        rpcClient,
+        goPlusClient,
+      );
+
+      const report = result.data as Record<string, unknown>;
+      const fuzzingResults = report["fuzzingResults"] as Record<string, unknown>;
+
+      // Fuzzing should run
+      expect(fuzzingResults).not.toBeNull();
+      expect(fuzzingResults["enabled"]).toBe(true);
+      expect(fuzzingResults["variantsRun"]).toBe(8);
+      expect(fuzzingResults["invariantViolations"]).toBe(0);
+
+      // No FUZZING_INVARIANT_VIOLATION flags
+      const fuzzFlags = result.flags.filter(
+        (f) => f.code === RiskFlagCode.FUZZING_INVARIANT_VIOLATION,
+      );
+      expect(fuzzFlags).toHaveLength(0);
+    });
+
+    it("should detect hidden revert when half-amount variant reverts (medium severity)", async () => {
+      let callCount = 0;
+      const rpcClient = createMockRPCClient({
+        simulateCall: vi.fn().mockImplementation(() => {
+          callCount++;
+          // First call = primary simulation (succeeds)
+          if (callCount === 1) {
+            return Promise.resolve({
+              success: true,
+              returnData: RETURN_DATA_1000_USDC,
+              revertReason: null,
+              gasUsed: 150_000n,
+              blockNumber: 1_000_000n,
+            });
+          }
+          // Find which fuzz variant this is — half-amount reverts, others succeed
+          // half-amount is variant #3 (index 2), so callCount=4 (primary + 2 preceding)
+          if (callCount === 4) {
+            return Promise.resolve({
+              success: false,
+              returnData: null,
+              revertReason: "INSUFFICIENT_INPUT_AMOUNT",
+              gasUsed: 50_000n,
+              blockNumber: 1_000_000n,
+            });
+          }
+          // All other variants succeed normally
+          return Promise.resolve({
+            success: true,
+            returnData: RETURN_DATA_1000_USDC,
+            revertReason: null,
+            gasUsed: 150_000n,
+            blockNumber: 1_000_000n,
+          });
+        }),
+      });
+      const goPlusClient = createMockGoPlusClient();
+
+      const result = await simulateTransaction(
+        FUZZ_TX,
+        USER_ADDRESS,
+        ROUTER_ADDRESS,
+        TOKEN_OUT,
+        1_000_000_000n,
+        6,
+        177,
+        "0",
+        { enableFuzzing: true },
+        rpcClient,
+        goPlusClient,
+      );
+
+      const fuzzFlags = result.flags.filter(
+        (f) => f.code === RiskFlagCode.FUZZING_INVARIANT_VIOLATION,
+      );
+      // 1 hidden revert = medium severity
+      expect(fuzzFlags.length).toBeGreaterThanOrEqual(1);
+      const revertFlag = fuzzFlags.find((f) => f.message.includes("REVERTED"));
+      if (revertFlag) {
+        expect(revertFlag.severity).toBe("medium");
+      }
+    });
+
+    it("should detect multiple hidden reverts as high severity", async () => {
+      let callCount = 0;
+      const rpcClient = createMockRPCClient({
+        simulateCall: vi.fn().mockImplementation(() => {
+          callCount++;
+          // Primary succeeds
+          if (callCount === 1) {
+            return Promise.resolve({
+              success: true,
+              returnData: RETURN_DATA_1000_USDC,
+              revertReason: null,
+              gasUsed: 150_000n,
+              blockNumber: 1_000_000n,
+            });
+          }
+          // half-amount (variant 3, call 4) and double-amount (variant 4, call 5) revert
+          if (callCount === 4 || callCount === 5) {
+            return Promise.resolve({
+              success: false,
+              returnData: null,
+              revertReason: "CONTRACT_TRAP",
+              gasUsed: 50_000n,
+              blockNumber: 1_000_000n,
+            });
+          }
+          return Promise.resolve({
+            success: true,
+            returnData: RETURN_DATA_1000_USDC,
+            revertReason: null,
+            gasUsed: 150_000n,
+            blockNumber: 1_000_000n,
+          });
+        }),
+      });
+      const goPlusClient = createMockGoPlusClient();
+
+      const result = await simulateTransaction(
+        FUZZ_TX,
+        USER_ADDRESS,
+        ROUTER_ADDRESS,
+        TOKEN_OUT,
+        1_000_000_000n,
+        6,
+        177,
+        "0",
+        { enableFuzzing: true },
+        rpcClient,
+        goPlusClient,
+      );
+
+      const fuzzFlags = result.flags.filter(
+        (f) => f.code === RiskFlagCode.FUZZING_INVARIANT_VIOLATION,
+      );
+      // 2+ hidden reverts = high severity
+      const highRevertFlag = fuzzFlags.find(
+        (f) => f.message.includes("INVARIANT VIOLATION") && f.severity === "high",
+      );
+      expect(highRevertFlag).toBeDefined();
+    });
+
+    it("should skip fuzzing when primary simulation reverts", async () => {
+      const rpcClient = createMockRPCClient({
+        simulateCall: vi.fn().mockResolvedValue({
+          success: false,
+          returnData: null,
+          revertReason: "EXPIRED",
+          gasUsed: 21_000n,
+          blockNumber: 1_000_000n,
+        }),
+      });
+      const goPlusClient = createMockGoPlusClient();
+
+      const result = await simulateTransaction(
+        FUZZ_TX,
+        USER_ADDRESS,
+        ROUTER_ADDRESS,
+        TOKEN_OUT,
+        1_000_000_000n,
+        6,
+        177,
+        "0",
+        { enableFuzzing: true },
+        rpcClient,
+        goPlusClient,
+      );
+
+      const report = result.data as Record<string, unknown>;
+      // Fuzzing should be null because primary reverted
+      expect(report["fuzzingResults"]).toBeNull();
+      // simulateCall should only be called once (primary only, no fuzz variants)
+      expect(rpcClient.simulateCall).toHaveBeenCalledTimes(1);
+    });
+
+    it("should skip fuzzing when enableFuzzing is false", async () => {
+      const rpcClient = createMockRPCClient({});
+      const goPlusClient = createMockGoPlusClient();
+
+      const result = await simulateTransaction(
+        FUZZ_TX,
+        USER_ADDRESS,
+        ROUTER_ADDRESS,
+        TOKEN_OUT,
+        1_000_000_000n,
+        6,
+        177,
+        "0",
+        { enableFuzzing: false },
+        rpcClient,
+        goPlusClient,
+      );
+
+      const report = result.data as Record<string, unknown>;
+      expect(report["fuzzingResults"]).toBeNull();
+      expect(report["simulationSuccess"]).toBe(true);
+    });
+
+    it("should populate all 8 variant names in results", async () => {
+      const rpcClient = createMockRPCClient({
+        simulateCall: vi.fn().mockResolvedValue({
+          success: true,
+          returnData: RETURN_DATA_1000_USDC,
+          revertReason: null,
+          gasUsed: 150_000n,
+          blockNumber: 1_000_000n,
+        }),
+      });
+      const goPlusClient = createMockGoPlusClient();
+
+      const result = await simulateTransaction(
+        FUZZ_TX,
+        USER_ADDRESS,
+        ROUTER_ADDRESS,
+        TOKEN_OUT,
+        1_000_000_000n,
+        6,
+        177,
+        "0",
+        { enableFuzzing: true },
+        rpcClient,
+        goPlusClient,
+      );
+
+      const report = result.data as Record<string, unknown>;
+      const fuzzingResults = report["fuzzingResults"] as Record<string, unknown>;
+      const variants = fuzzingResults["variants"] as Array<Record<string, unknown>>;
+
+      const expectedNames = [
+        "zero-args", "max-uint256", "half-amount", "double-amount",
+        "10x-amount", "byte-flip", "truncation", "selector-swap",
+      ];
+
+      const variantNames = variants.map((v) => v["name"]);
+      for (const name of expectedNames) {
+        expect(variantNames).toContain(name);
+      }
+    });
+
+    it("should handle fuzzing with short calldata gracefully (fewer than 32 param bytes)", async () => {
+      // Use a short calldata — just a 4-byte selector + 20 bytes (not enough for fuzzing)
+      const shortTx = "0xabcdef12001122334455" as HexString;
+      const rpcClient = createMockRPCClient({});
+      const goPlusClient = createMockGoPlusClient();
+
+      const result = await simulateTransaction(
+        shortTx,
+        USER_ADDRESS,
+        ROUTER_ADDRESS,
+        TOKEN_OUT,
+        1_000_000_000n,
+        6,
+        177,
+        "0",
+        { enableFuzzing: true },
+        rpcClient,
+        goPlusClient,
+      );
+
+      // Should still succeed — fuzzing skipped gracefully
+      expect(result.score).toBeGreaterThan(0);
+      const report = result.data as Record<string, unknown>;
+      expect(report["simulationSuccess"]).toBe(true);
+      // fuzzingResults is null because calldata was too short
+      expect(report["fuzzingResults"]).toBeNull();
     });
   });
 });

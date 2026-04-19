@@ -26,7 +26,7 @@ npm run dev
 ## 🧪 Running Tests
 
 ```bash
-# All tests (76 tests, 6 suites)
+# All tests (83 tests, 6 suites)
 npm test
 
 # Watch mode (re-runs on file changes)
@@ -119,7 +119,7 @@ refactor: rebalance risk engine for 4 analyzers
 1. Fork the repository
 2. Create a feature branch (`git checkout -b feat/your-feature`)
 3. Write tests FIRST, then implementation
-4. Ensure `npm test` passes with zero failures (currently 76/76)
+4. Ensure `npm test` passes with zero failures (currently 83/83)
 5. Ensure `npx tsc --noEmit` passes with zero errors
 6. Submit a PR with a clear description of what and why
 

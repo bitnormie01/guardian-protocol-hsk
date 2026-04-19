@@ -12,7 +12,7 @@ const CHAINS = [
 const SAMPLE_ADDR = '0xefd4bc9afd210517803f293ababd701caeecdfd0'; // WHSK
 const USER_ADDR   = '0x2B6E71C59f571969Ae9C32373aa4Ce48054cbF27';
 const TOKEN_OUT_DEFAULT = '0xf1b50ed67a9e2cc94ad3c477779e2d4cbfff9029'; // USDT
-const POOL_DEFAULT = '0xd136e36610f35e0cc3cad40de858c151f2aa65d4';
+const POOL_DEFAULT = '0xEB33d6666dd2359cB1BF6Ea6D72286Cc1b4a778A';
 
 // ── Mock risk flags for hero live feed ONLY ───────────────────
 const RISK_FLAGS = [

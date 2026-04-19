@@ -94,6 +94,28 @@ export interface SimulationThresholds {
    * Default: 10000 (10 seconds)
    */
   simulationTimeoutMs: number;
+
+  /**
+   * Whether to run the 8-variant invariant fuzzer after the primary
+   * simulation succeeds. Disable for latency-critical evaluations.
+   * Default: true
+   */
+  enableFuzzing: boolean;
+
+  /**
+   * Timeout for the entire fuzz batch in milliseconds.
+   * All 8 variants run in parallel; this is the wall-clock budget.
+   * Default: 5000 (5 seconds)
+   */
+  fuzzTimeoutMs: number;
+
+  /**
+   * Maximum acceptable deviation ratio between a fuzz variant's output
+   * and the expected proportional output. Values above this trigger a
+   * FUZZING_INVARIANT_VIOLATION flag for output non-linearity.
+   * Default: 0.30 (30%)
+   */
+  fuzzMaxDeviationRatio: number;
 }
 
 const DEFAULT_THRESHOLDS: SimulationThresholds = {
@@ -103,6 +125,9 @@ const DEFAULT_THRESHOLDS: SimulationThresholds = {
   simulationTimeoutMs: Number(
     process.env["GUARDIAN_TX_SIMULATION_TIMEOUT_MS"] ?? "10000",
   ),
+  enableFuzzing: true,
+  fuzzTimeoutMs: 5000,
+  fuzzMaxDeviationRatio: 0.30,
 };
 
 // ---------------------------------------------------------------------------
@@ -205,6 +230,35 @@ export interface TxSimulationReport {
 
   /** Sub-score for this analyzer (0–100). */
   score: number;
+
+  // ---- Invariant Fuzzing Results ----
+
+  /**
+   * Results from the 8-variant invariant fuzzer.
+   * Null if fuzzing was disabled, skipped (primary reverted), or timed out entirely.
+   */
+  fuzzingResults: {
+    /** Whether fuzzing was enabled for this evaluation. */
+    enabled: boolean;
+    /** Number of fuzz variants attempted. */
+    variantsRun: number;
+    /** Number that completed (success or revert). */
+    variantsCompleted: number;
+    /** Number that failed due to RPC errors (not reverts). */
+    variantsFailed: number;
+    /** Number of invariant violations detected. */
+    invariantViolations: number;
+    /** Per-variant results. */
+    variants: Array<{
+      name: string;
+      success: boolean;
+      reverted: boolean;
+      outputDeviation: number | null;
+      anomaly: string | null;
+    }>;
+    /** Wall-clock time for the fuzz batch. */
+    durationMs: number;
+  } | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -416,6 +470,360 @@ async function runCrossValidationSimulation(
 }
 
 // ---------------------------------------------------------------------------
+// Invariant Fuzzing: 8-Variant Mutation Engine
+// ---------------------------------------------------------------------------
+//
+// After the primary eth_call succeeds, we run 8 MUTATED versions of
+// the same transaction to probe for hidden contract behavior:
+//
+//   - State-dependent traps (reverts only under certain conditions)
+//   - Non-linear output (price manipulation, hidden fees on large amounts)
+//   - Fallback function traps (unexpected selector handling)
+//   - ABI compliance issues (missing parameter handling)
+//
+// All 8 variants run IN PARALLEL via Promise.allSettled, reusing the
+// same round-robin RPC pool. Each variant uses the SAME pinned block
+// for deterministic results.
+// ---------------------------------------------------------------------------
+
+/** A single fuzz variant definition. */
+interface FuzzVariant {
+  name: string;
+  /** The mutated calldata hex string. */
+  data: HexString;
+  /** Expected output multiplier relative to the primary (for linearity checks). */
+  expectedMultiplier: number | null;
+}
+
+/** Result of a single fuzz variant execution. */
+interface FuzzVariantResult {
+  name: string;
+  success: boolean;
+  reverted: boolean;
+  returnData: HexString | null;
+  error: string | null;
+}
+
+/**
+ * Generates 8 mutated variants of the proposed transaction calldata.
+ *
+ * All mutations operate on raw hex bytes — no ABI decoding required.
+ * This is intentional: a fuzzer should test the contract's handling
+ * of MALFORMED inputs, not just well-formed ones.
+ *
+ * The calldata layout for a typical EVM function call:
+ *   Bytes 0–3:   Function selector (4 bytes)
+ *   Bytes 4–35:  First parameter (32 bytes, typically uint256)
+ *   Bytes 36–67: Second parameter, etc.
+ */
+function generateFuzzVariants(originalData: HexString): FuzzVariant[] {
+  // Strip 0x prefix for byte manipulation, then re-add
+  const raw = originalData.slice(2);
+  const selector = raw.slice(0, 8); // 4 bytes = 8 hex chars
+  const params = raw.slice(8);      // Everything after selector
+
+  // If calldata is too short (just a selector or less), skip fuzzing
+  if (params.length < 64) {
+    logger.info("[fuzz] Calldata too short for meaningful fuzzing, skipping", {
+      calldataLength: raw.length / 2,
+    });
+    return [];
+  }
+
+  // Extract the first uint256 parameter (bytes 4–35 = hex chars 8–71)
+  const firstParam = params.slice(0, 64);
+  const firstParamBigInt = BigInt("0x" + firstParam);
+  const restParams = params.slice(64);
+
+  const variants: FuzzVariant[] = [];
+
+  // Variant 1: Zero-args — replace all params with zeros
+  variants.push({
+    name: "zero-args",
+    data: ("0x" + selector + "0".repeat(params.length)) as HexString,
+    expectedMultiplier: null, // Can't predict output for zero input
+  });
+
+  // Variant 2: Max-uint256 — replace first param with 2^256 - 1
+  const maxUint256 = "f".repeat(64);
+  variants.push({
+    name: "max-uint256",
+    data: ("0x" + selector + maxUint256 + restParams) as HexString,
+    expectedMultiplier: null, // Overflow-class test, no linear expectation
+  });
+
+  // Variant 3: Half-amount — divide first param by 2
+  const halfAmount = (firstParamBigInt / 2n).toString(16).padStart(64, "0");
+  variants.push({
+    name: "half-amount",
+    data: ("0x" + selector + halfAmount + restParams) as HexString,
+    expectedMultiplier: 0.5,
+  });
+
+  // Variant 4: Double-amount — multiply first param by 2
+  const doubleAmount = (firstParamBigInt * 2n).toString(16).padStart(64, "0");
+  // Protect against overflow beyond uint256
+  const doubleHex = doubleAmount.length > 64
+    ? maxUint256
+    : doubleAmount;
+  variants.push({
+    name: "double-amount",
+    data: ("0x" + selector + doubleHex + restParams) as HexString,
+    expectedMultiplier: 2.0,
+  });
+
+  // Variant 5: 10x-amount — multiply first param by 10
+  const tenXAmount = (firstParamBigInt * 10n).toString(16).padStart(64, "0");
+  const tenXHex = tenXAmount.length > 64
+    ? maxUint256
+    : tenXAmount;
+  variants.push({
+    name: "10x-amount",
+    data: ("0x" + selector + tenXHex + restParams) as HexString,
+    expectedMultiplier: 10.0,
+  });
+
+  // Variant 6: Byte-flip — XOR the first byte of the first param with 0xFF
+  const flippedFirstByte = (parseInt(firstParam.slice(0, 2), 16) ^ 0xFF)
+    .toString(16)
+    .padStart(2, "0");
+  const flippedParam = flippedFirstByte + firstParam.slice(2);
+  variants.push({
+    name: "byte-flip",
+    data: ("0x" + selector + flippedParam + restParams) as HexString,
+    expectedMultiplier: null, // Random mutation, no linear expectation
+  });
+
+  // Variant 7: Truncation — remove last 32 bytes of calldata
+  const truncatedRaw = raw.slice(0, Math.max(raw.length - 64, 8));
+  variants.push({
+    name: "truncation",
+    data: ("0x" + truncatedRaw) as HexString,
+    expectedMultiplier: null,
+  });
+
+  // Variant 8: Selector-swap — replace selector with 0x00000000 (fallback)
+  variants.push({
+    name: "selector-swap",
+    data: ("0x" + "00000000" + params) as HexString,
+    expectedMultiplier: null,
+  });
+
+  return variants;
+}
+
+/**
+ * Fires all fuzz variants in parallel against the RPC pool.
+ *
+ * Uses Promise.allSettled so individual failures don't crash the batch.
+ * The entire batch is wrapped in a timeout — if the RPC pool is slow,
+ * we abandon fuzzing rather than blocking the pipeline.
+ */
+async function runFuzzBatch(
+  rpcClient: HashKeyRPCClient,
+  baseParams: SimulationCallParams,
+  variants: FuzzVariant[],
+  blockNumber: bigint,
+  timeoutMs: number,
+): Promise<FuzzVariantResult[]> {
+  const fuzzPromises = variants.map(async (variant): Promise<FuzzVariantResult> => {
+    try {
+      const result = await rpcClient.simulateCall(
+        { ...baseParams, data: variant.data },
+        blockNumber,
+      );
+      return {
+        name: variant.name,
+        success: result.success,
+        reverted: !result.success,
+        returnData: result.returnData,
+        error: null,
+      };
+    } catch (err) {
+      return {
+        name: variant.name,
+        success: false,
+        reverted: false,
+        returnData: null,
+        error: err instanceof Error ? err.message : String(err),
+      };
+    }
+  });
+
+  // Race the entire batch against a timeout
+  const timeoutPromise = new Promise<FuzzVariantResult[]>((resolve) => {
+    setTimeout(() => {
+      logger.warn("[fuzz] Fuzz batch timed out, returning partial results");
+      resolve([]);
+    }, timeoutMs);
+  });
+
+  return Promise.race([
+    Promise.all(fuzzPromises),
+    timeoutPromise,
+  ]);
+}
+
+/**
+ * Analyzes fuzz results against the primary simulation to detect:
+ *   A. Hidden reverts — variants that revert when the primary succeeded
+ *   B. Output non-linearity — proportional inputs producing disproportionate outputs
+ *
+ * Returns an array of risk flags for each detected anomaly.
+ */
+function analyzeFuzzResults(
+  primaryReturnData: HexString | null,
+  variants: FuzzVariant[],
+  results: FuzzVariantResult[],
+  maxDeviationRatio: number,
+): {
+  flags: RiskFlag[];
+  variantDetails: Array<{
+    name: string;
+    success: boolean;
+    reverted: boolean;
+    outputDeviation: number | null;
+    anomaly: string | null;
+  }>;
+} {
+  const flags: RiskFlag[] = [];
+  const variantDetails: Array<{
+    name: string;
+    success: boolean;
+    reverted: boolean;
+    outputDeviation: number | null;
+    anomaly: string | null;
+  }> = [];
+
+  // Decode the primary simulation's output as a uint256 for comparison
+  let primaryOutput: bigint | null = null;
+  if (primaryReturnData && primaryReturnData !== "0x" && primaryReturnData.length >= 66) {
+    try {
+      const [decoded] = decodeAbiParameters(
+        parseAbiParameters("uint256"),
+        primaryReturnData as HexString,
+      ) as [bigint];
+      if (decoded > 0n) {
+        primaryOutput = decoded;
+      }
+    } catch {
+      // Can't decode primary output — skip linearity checks
+    }
+  }
+
+  // Track hidden reverts
+  const hiddenReverts: string[] = [];
+
+  for (const result of results) {
+    const variant = variants.find((v) => v.name === result.name);
+    if (!variant) continue;
+
+    let outputDeviation: number | null = null;
+    let anomaly: string | null = null;
+
+    // --- Check A: Hidden Reverts ---
+    // Variants that revert when the primary succeeded indicate
+    // state-dependent contract behavior (traps, conditional modifiers).
+    if (result.reverted && !result.error) {
+      // Certain variants are EXPECTED to revert (zero-args, max-uint256,
+      // truncation, selector-swap, byte-flip). These test edge cases.
+      // Only flag amount-based variants (half, double, 10x) as suspicious
+      // because proportional inputs should not cause reverts.
+      const amountVariants = ["half-amount", "double-amount", "10x-amount"];
+      if (amountVariants.includes(result.name)) {
+        hiddenReverts.push(result.name);
+        anomaly = `${result.name} REVERTED while primary succeeded — ` +
+          `the contract has state-dependent behavior that blocks ` +
+          `proportional inputs. This may indicate a trap or conditional restriction.`;
+      }
+    }
+
+    // --- Check B: Output Non-Linearity ---
+    // For variants with expected multipliers (half, double, 10x),
+    // verify the output is roughly proportional.
+    if (
+      result.success &&
+      primaryOutput !== null &&
+      variant.expectedMultiplier !== null &&
+      result.returnData &&
+      result.returnData !== "0x" &&
+      result.returnData.length >= 66
+    ) {
+      try {
+        const [variantOutput] = decodeAbiParameters(
+          parseAbiParameters("uint256"),
+          result.returnData as HexString,
+        ) as [bigint];
+
+        if (variantOutput > 0n) {
+          const expectedOutput = Number(primaryOutput) * variant.expectedMultiplier;
+          const actualOutput = Number(variantOutput);
+          const deviation = Math.abs(actualOutput - expectedOutput) / expectedOutput;
+          outputDeviation = Math.round(deviation * 10000) / 10000;
+
+          if (deviation > maxDeviationRatio) {
+            anomaly = `${result.name} output deviates ${(deviation * 100).toFixed(1)}% ` +
+              `from expected proportional output (threshold: ${(maxDeviationRatio * 100).toFixed(0)}%). ` +
+              `Expected ~${expectedOutput.toFixed(0)} but got ${actualOutput.toFixed(0)}. ` +
+              `This suggests non-linear pricing behavior — possible manipulation or hidden fees.`;
+          }
+        }
+      } catch {
+        // Can't decode variant output — skip linearity check
+      }
+    }
+
+    variantDetails.push({
+      name: result.name,
+      success: result.success,
+      reverted: result.reverted,
+      outputDeviation,
+      anomaly,
+    });
+  }
+
+  // --- Generate Flags ---
+
+  // Hidden reverts: high severity if 2+ variants revert, medium if 1
+  if (hiddenReverts.length >= 2) {
+    flags.push(createFlag(
+      RiskFlagCode.FUZZING_INVARIANT_VIOLATION,
+      "high",
+      `INVARIANT VIOLATION: ${hiddenReverts.length} fuzz variants (${hiddenReverts.join(", ")}) ` +
+        `REVERTED while the primary transaction succeeded. The contract exhibits ` +
+        `state-dependent gating behavior that blocks proportional inputs — ` +
+        `this is a strong indicator of a conditional trap or hidden restriction.`,
+    ));
+  } else if (hiddenReverts.length === 1) {
+    flags.push(createFlag(
+      RiskFlagCode.FUZZING_INVARIANT_VIOLATION,
+      "medium",
+      `INVARIANT WARNING: Fuzz variant "${hiddenReverts[0]}" REVERTED while ` +
+        `the primary transaction succeeded. The contract may have amount-dependent ` +
+        `restrictions. Exercise caution — the trade may be fragile to input changes.`,
+    ));
+  }
+
+  // Output non-linearity: flag each deviation independently
+  const nonLinearVariants = variantDetails.filter(
+    (v) => v.anomaly !== null && !v.reverted,
+  );
+  if (nonLinearVariants.length > 0) {
+    const severity = nonLinearVariants.length >= 2 ? "high" as const : "medium" as const;
+    flags.push(createFlag(
+      RiskFlagCode.FUZZING_INVARIANT_VIOLATION,
+      severity,
+      `NON-LINEAR OUTPUT: ${nonLinearVariants.length} fuzz variant(s) produced ` +
+        `disproportionate outputs (${nonLinearVariants.map((v) => v.name).join(", ")}). ` +
+        `The contract's pricing curve is non-linear beyond the acceptable threshold. ` +
+        `This may indicate hidden fees, price manipulation, or a rigged AMM curve.`,
+    ));
+  }
+
+  return { flags, variantDetails };
+}
+
+// ---------------------------------------------------------------------------
 // Main Export: simulateTransaction()
 // ---------------------------------------------------------------------------
 
@@ -532,6 +940,104 @@ export async function simulateTransaction(
             `DO NOT execute this transaction until the revert is resolved.`,
         ),
       );
+    }
+
+    // ------------------------------------------------------------------
+    // Step 2.5: Invariant Fuzzing (8 variants, parallel)
+    // ------------------------------------------------------------------
+    // Run ONLY if the primary simulation SUCCEEDED. If it reverted,
+    // there's no baseline to compare fuzz variants against.
+    // Fuzzing is fire-and-forget: if it fails (timeout, RPC error),
+    // we continue with the primary result only.
+
+    let fuzzingResults: TxSimulationReport["fuzzingResults"] = null;
+
+    if (
+      ethCallResult.success &&
+      resolvedThresholds.enableFuzzing
+    ) {
+      const fuzzStart = performance.now();
+      try {
+        const variants = generateFuzzVariants(proposedTxHex);
+
+        if (variants.length > 0) {
+          logger.info(`[${ANALYZER_NAME}] Running ${variants.length}-variant invariant fuzzer`, {
+            variantNames: variants.map((v) => v.name),
+            blockNumber: ethCallResult.blockNumber.toString(),
+            fuzzTimeoutMs: resolvedThresholds.fuzzTimeoutMs,
+          });
+
+          const fuzzResults = await runFuzzBatch(
+            rpc,
+            callParams,
+            variants,
+            ethCallResult.blockNumber,
+            resolvedThresholds.fuzzTimeoutMs,
+          );
+
+          const fuzzDurationMs = Math.round(performance.now() - fuzzStart);
+
+          if (fuzzResults.length > 0) {
+            const analysis = analyzeFuzzResults(
+              ethCallResult.returnData,
+              variants,
+              fuzzResults,
+              resolvedThresholds.fuzzMaxDeviationRatio,
+            );
+
+            // Merge fuzzing flags into the main flag array
+            flags.push(...analysis.flags);
+
+            const completed = fuzzResults.filter(
+              (r) => r.success || r.reverted,
+            ).length;
+            const failed = fuzzResults.filter(
+              (r) => r.error !== null,
+            ).length;
+
+            fuzzingResults = {
+              enabled: true,
+              variantsRun: variants.length,
+              variantsCompleted: completed,
+              variantsFailed: failed,
+              invariantViolations: analysis.flags.length,
+              variants: analysis.variantDetails,
+              durationMs: fuzzDurationMs,
+            };
+
+            logger.info(`[${ANALYZER_NAME}] Fuzzing complete`, {
+              variantsRun: variants.length,
+              completed,
+              failed,
+              violations: analysis.flags.length,
+              durationMs: fuzzDurationMs,
+            });
+          } else {
+            // Fuzz batch timed out entirely
+            fuzzingResults = {
+              enabled: true,
+              variantsRun: variants.length,
+              variantsCompleted: 0,
+              variantsFailed: variants.length,
+              invariantViolations: 0,
+              variants: [],
+              durationMs: fuzzDurationMs,
+            };
+            logger.warn(`[${ANALYZER_NAME}] Fuzz batch timed out entirely`, {
+              durationMs: fuzzDurationMs,
+            });
+          }
+        } else {
+          logger.info(`[${ANALYZER_NAME}] Fuzzing skipped — calldata too short`);
+        }
+      } catch (fuzzErr) {
+        // Fuzzing failure is NON-FATAL — we continue with primary results
+        const fuzzDurationMs = Math.round(performance.now() - fuzzStart);
+        logger.warn(`[${ANALYZER_NAME}] Fuzzing failed (non-fatal)`, {
+          error: fuzzErr instanceof Error ? fuzzErr.message : String(fuzzErr),
+          durationMs: fuzzDurationMs,
+        });
+      }
     }
 
     // ------------------------------------------------------------------
@@ -744,6 +1250,8 @@ export async function simulateTransaction(
       chainId,
       flags,
       score,
+
+      fuzzingResults,
     };
 
     // ------------------------------------------------------------------

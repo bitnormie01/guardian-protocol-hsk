@@ -80,7 +80,7 @@ function HeroStream() {
         </div>
 
         <div className="hero-stats">
-          <Stat k="TESTS PASSING" v="76/76" sub="deterministic suite" big accent />
+          <Stat k="TESTS PASSING" v="83/83" sub="deterministic suite" big accent />
           <Stat k="RISK FLAGS" v="30+" sub="taxonomy codes" big />
           <Stat k="ONCHAIN PROOFS" v="3" sub="verdict commits" big />
         </div>
@@ -180,7 +180,7 @@ function HeroManifesto() {
         anything it cannot prove is safe — in under two seconds.
       </p>
       <div className="hm-stats">
-        <div><b>76/76</b><span>tests passing</span></div>
+        <div><b>83/83</b><span>tests passing</span></div>
         <div><b>30+</b><span>risk flag codes</span></div>
         <div><b>3</b><span>on-chain proofs</span></div>
       </div>
