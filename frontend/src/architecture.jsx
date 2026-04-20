@@ -5,8 +5,8 @@ function Architecture() {
     {
       no: '01', phase: 'Phase 2', key: 'token',
       title: 'Token Risk Analyzer',
-      body: 'GoPlus dual-oracle cross-scan. Honeypot signatures, owner privilege detection, transfer tax, holder concentration, blacklist mechanisms.',
-      metrics: [['latency', '~180ms'], ['surface', '12 checks'], ['oracles', '2'], ['confidence', '0.94']],
+      body: 'GoPlus Security API primary scan. Honeypot signatures, owner privilege detection, transfer tax, holder concentration, blacklist mechanisms. RPC bytecode pre-check confirms contract existence before oracle call.',
+      metrics: [['latency', '~180ms'], ['surface', '11 checks'], ['oracle', 'GoPlus'], ['confidence', '0.94']],
     },
     {
       no: '02', phase: 'Phase 3', key: 'sim',
@@ -17,14 +17,14 @@ function Architecture() {
     {
       no: '03', phase: 'Phase 4', key: 'mev',
       title: 'MEV Detection Engine',
-      body: 'Builder toxicity scoring. Sandwich attack pattern matching. Dynamic slippage caps calibrated to pool tick depth.',
-      metrics: [['latency', '~110ms'], ['builders', '38 scored'], ['patterns', '14'], ['cap range', '0.1–5%']],
+      body: 'Trade-size-tiered slippage analysis. Caps tighten 50% above $10K, 25% above $1K, 10% above $100. Dynamic exposure scoring before on-chain execution.',
+      metrics: [['latency', '~110ms'], ['threshold', '500 bps'], ['scaling', 'size-tiered'], ['cap range', '0.1–5%']],
     },
     {
       no: '04', phase: 'Phase 4.5', key: 'amm',
       title: 'AMM Pool Analytics',
       body: 'Uniswap V3 slot0, liquidity depth, TWAP deviation. Concentrated liquidity risk, price-impact modeling, tick manipulation detection.',
-      metrics: [['latency', '~240ms'], ['twap', '1h · 6h · 24h'], ['tick δ', '±σ'], ['impact', 'marginal']],
+      metrics: [['latency', '~240ms'], ['twap', '5m · 30m'], ['tick scan', '±20'], ['impact', 'marginal']],
     },
   ];
 
