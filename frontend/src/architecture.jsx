@@ -6,13 +6,13 @@ function Architecture() {
       no: '01', phase: 'Phase 2', key: 'token',
       title: 'Token Risk Analyzer',
       body: 'GoPlus Security API primary scan. Honeypot signatures, owner privilege detection, transfer tax, holder concentration, blacklist mechanisms. RPC bytecode pre-check confirms contract existence before oracle call.',
-      metrics: [['latency', '~180ms'], ['surface', '11 checks'], ['oracle', 'GoPlus'], ['confidence', '0.94']],
+      metrics: [['latency', '~180ms'], ['surface', '11 checks'], ['oracle', 'GoPlus'], ['fail-mode', 'closed']],
     },
     {
       no: '02', phase: 'Phase 3', key: 'sim',
       title: 'TX Simulation & Fuzzing',
       body: 'Eight-variant invariant fuzzer over eth_call. Cross-RPC validation, revert detection, state-dependent trap identification, gas anomaly baselines.',
-      metrics: [['latency', '~420ms'], ['variants', '8'], ['rpcs', '3'], ['baseline', '7d rolling']],
+      metrics: [['latency', '~420ms'], ['variants', '8'], ['rpcs', '3'], ['deviation', '±30%']],
     },
     {
       no: '03', phase: 'Phase 4', key: 'mev',
