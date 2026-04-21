@@ -5,7 +5,7 @@ const TABS = [
   { id: 'token', label: 'Token Scan',     sub: 'single-token pre-screen' },
   { id: 'sim',   label: 'TX Simulation',  sub: '8-variant fuzzer' },
   { id: 'mev',   label: 'MEV Detection',  sub: 'toxicity + sandwich' },
-  { id: 'amm',   label: 'AMM Pool',       sub: 'Uni V3 analytics' },
+  { id: 'amm',   label: 'AMM Pool',       sub: 'multi-protocol discovery' },
 ];
 
 function ChainSelect({ value, onChange }) {

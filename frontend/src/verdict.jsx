@@ -59,7 +59,7 @@ function CockpitPanel({ stream, running }) {
     ['token', 'Token Risk',     'GoPlus dual-oracle'],
     ['sim',   'TX Simulation',  '8-variant fuzzer'],
     ['mev',   'MEV Detection',  'builder toxicity'],
-    ['amm',   'AMM Pool',       'Uni V3 analytics'],
+    ['amm',   'AMM Pool',       'multi-protocol discovery'],
   ];
 
   return (
