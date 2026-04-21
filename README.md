@@ -96,7 +96,7 @@ npx tsx src/cli.ts evaluate \
   0xF1B50eD67A9e2CC94Ad3c477779E2d4cBfFf9029 \
   10000000000000000 \
   --chain 177 \
-  --user 0xYourWalletAddress  # optional — defaults to 0x0...001; enables wallet-risk analysis when provided
+  --user 0x1234567890AbCdEf1234567890AbCdEf12345678  # optional; enables wallet-risk analysis when provided
 
 # Token-only risk scan
 npx tsx src/cli.ts scan-token \
@@ -105,8 +105,8 @@ npx tsx src/cli.ts scan-token \
 
 # Transaction pre-flight simulation
 npx tsx src/cli.ts simulate-tx \
-  0x095ea7b30000000000000000000000006b3... \
-  --user 0xYourWalletAddress \
+  0x095ea7b30000000000000000000000006b31 \
+  --user 0x1234567890AbCdEf1234567890AbCdEf12345678 \
   --chain 177
 ```
 
