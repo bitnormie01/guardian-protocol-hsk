@@ -79,7 +79,7 @@ import {
   analyzeTokenPairRisk,
 } from "./analyzers/token-risk.js";
 import { simulateTransaction } from "./analyzers/tx-simulation.js";
-import { analyzeMEVRisk } from "./analyzers/mev-detection.js";
+import { analyzeMEVRisk, type AMMContextForMEV } from "./analyzers/mev-detection.js";
 import { analyzeAMMPoolRisk } from "./analyzers/amm-pool-analyzer.js";
 import { resolveTradeContext } from "./services/trade-context.js";
 
@@ -268,13 +268,51 @@ export async function evaluateTrade(
   });
 
   // ==================================================================
-  // STAGE 1: Run all four analyzers IN PARALLEL
+  // STAGE 1a: Run AMM Pool Analyzer FIRST
   // ==================================================================
-  // Promise.allSettled ensures one failure doesn't kill the others.
-  // Each analyzer is wrapped in runAnalyzer() which catches errors
-  // and returns a synthetic failed result.
+  // The AMM analyzer runs first so its output (active liquidity, thin
+  // liquidity detection) can be passed to the MEV analyzer for accurate
+  // price impact calculations. This replaces the old parallel execution
+  // which prevented cross-analyzer intelligence.
 
-  const [tokenRiskResult, txSimResult, mevResult, ammPoolResult] =
+  const ammPoolResult = await runAnalyzer("amm-pool-analyzer", async () => {
+    return await analyzeAMMPoolRisk(
+      resolvedTradeContext.poolAddress,
+      resolvedTradeContext.estimatedTradeUsd,
+      request.tokenIn,
+      request.tokenOut,
+      chainId,
+      resolvedConfig.ammPool,
+    );
+  });
+
+  // Extract AMM context for the MEV analyzer (cross-analyzer intelligence)
+  const ammData = ammPoolResult.data as Record<string, unknown>;
+  const ammContextForMEV: AMMContextForMEV | undefined =
+    ammData?.error !== true
+      ? {
+          activeLiquidityUsd:
+            (ammData?.estimatedLiquidityDepthUsd as number) ?? 0,
+          thinLiquidityDetected:
+            (ammData?.thinLiquidityDetected as boolean) ?? false,
+          effectiveLiquidity:
+            (ammData?.effectiveLiquidity as string) ?? "0",
+        }
+      : undefined;
+
+  logger.info("[orchestrator] AMM context extracted for MEV analyzer", {
+    ammContextAvailable: !!ammContextForMEV,
+    activeLiquidityUsd: ammContextForMEV?.activeLiquidityUsd ?? "N/A",
+    thinLiquidityDetected: ammContextForMEV?.thinLiquidityDetected ?? "N/A",
+  });
+
+  // ==================================================================
+  // STAGE 1b: Run remaining analyzers IN PARALLEL
+  // ==================================================================
+  // Token risk, TX simulation, and MEV detection run in parallel.
+  // MEV detection now receives AMM context for price impact calculations.
+
+  const [tokenRiskResult, txSimResult, mevResult] =
     await Promise.all([
       // ---- Analyzer 1: Token Risk (Phase 2) ----
       // Scans BOTH tokenIn and tokenOut in parallel.
@@ -350,6 +388,7 @@ export async function evaluateTrade(
       }),
 
       // ---- Analyzer 3: MEV / Off-Chain Signals (Phase 4) ----
+      // Now receives AMM context for institutional-grade price impact.
       runAnalyzer("mev-detection-analyzer", async () => {
         return await analyzeMEVRisk(
           request.tokenIn,
@@ -359,43 +398,8 @@ export async function evaluateTrade(
           request.proposedTxHex ?? null,
           chainId,
           resolvedConfig.mevDetection,
-        );
-      }),
-
-      // ---- Analyzer 4: AMM Pool Analysis (Phase 2) ----
-      // Reads concentrated liquidity pool state on-chain and checks
-      // for manipulation: thin liquidity, tick gaps, price deviation.
-      runAnalyzer("amm-pool-analyzer", async () => {
-        if (!resolvedTradeContext.poolAddress) {
-          const flag: RiskFlag = {
-            code: RiskFlagCode.AMM_READ_FAILED,
-            severity: "high",
-            message:
-              "Guardian could not resolve a concentrated liquidity pool address " +
-              "for this token pair. AMM state cannot be verified, so the trade " +
-              "is treated as unsafe until routing/pool context is provided.",
-            source: "amm-pool-analyzer",
-          };
-
-          return {
-            analyzerName: "amm-pool-analyzer",
-            flags: [flag],
-            score: 0,
-            durationMs: 0,
-            data: {
-              error: true,
-              errorCode: ErrorCode.ANALYZER_ERROR,
-              errorMessage: "No concentrated liquidity pool address resolved",
-              poolReadSuccess: false,
-            },
-          };
-        }
-
-        return await analyzeAMMPoolRisk(
-          resolvedTradeContext.poolAddress,
-          resolvedTradeContext.estimatedTradeUsd,
-          chainId,
-          resolvedConfig.ammPool,
+          request.maxSlippageBps ?? 500,
+          ammContextForMEV,
         );
       }),
     ]);

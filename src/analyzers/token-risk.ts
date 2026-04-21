@@ -74,6 +74,20 @@ import { logger } from "../utils/logger.js";
 import { HashKeyRPCClient } from "../services/hashkey-rpc-client.js";
 
 // ---------------------------------------------------------------------------
+// Trusted Infrastructure Tokens
+// ---------------------------------------------------------------------------
+
+/**
+ * Whitelist of trusted infrastructure tokens on HashKey Chain.
+ * These contracts may have owners or mint functions by design 
+ * (e.g., bridged assets, weth) and should bypass certain heuristic checks.
+ */
+export const WHITELISTED_TOKENS: string[] = [
+  "0xefd4bC9afD210517803f293ABABd701CaeeCdfd0".toLowerCase(), // WETH
+  "0xF1B50eD67A9e2CC94Ad3c477779E2d4cBfFf9029".toLowerCase(), // USDT
+];
+
+// ---------------------------------------------------------------------------
 // Configurable Thresholds
 // ---------------------------------------------------------------------------
 
@@ -201,6 +215,10 @@ async function buildRiskFlags(
   const flags: RiskFlag[] = [];
   let fatalDetectedDirectly = false;
 
+  const isWhitelisted = WHITELISTED_TOKENS.includes(
+    data.tokenAddress.toLowerCase()
+  );
+
   // ====================================================================
   // SECTION 1 — FATAL CHECKS
   // We first check granular GoPlus isRiskTokenv6 boolean fields. Only if isRiskToken
@@ -264,8 +282,14 @@ async function buildRiskFlags(
           "Unverified source code": RiskFlagCode.UNVERIFIED_CONTRACT,
         };
         for (const reason of reasons) {
+          const flagCode = codeMap[reason.label] ?? RiskFlagCode.HONEYPOT_DETECTED;
+          
+          if (isWhitelisted && (flagCode === RiskFlagCode.MINT_FUNCTION_PRESENT || flagCode === RiskFlagCode.OWNERSHIP_NOT_RENOUNCED)) {
+            continue;
+          }
+
           flags.push({
-            code: codeMap[reason.label] ?? RiskFlagCode.HONEYPOT_DETECTED,
+            code: flagCode,
             severity: reason.severity,
             message: reason.detail,
             source: "token-risk-analyzer/goplus",
@@ -302,7 +326,7 @@ async function buildRiskFlags(
   // SECTION 2 — HIGH-SEVERITY CHECKS
   // ====================================================================
 
-  if (data.isMintable) {
+  if (data.isMintable && !isWhitelisted) {
     flags.push({
       code: RiskFlagCode.MINT_FUNCTION_PRESENT,
       severity: "high",
@@ -389,6 +413,7 @@ async function buildRiskFlags(
 
   const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
   if (
+    !isWhitelisted &&
     data.ownerAddress !== undefined &&
     data.ownerAddress.toLowerCase() !== ZERO_ADDRESS
   ) {

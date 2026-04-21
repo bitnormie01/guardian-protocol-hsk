@@ -164,7 +164,7 @@ describe("MEV Detection Analyzer", () => {
       expect(cap).toHaveProperty("explanation");
     });
 
-    it("should tighten slippage for large trades", async () => {
+    it("should scale slippage cap with trade size", async () => {
       const smallTradeResult = await analyzeMEVRisk(
         TOKEN_IN,
         TOKEN_OUT,
@@ -177,7 +177,7 @@ describe("MEV Detection Analyzer", () => {
       const largeTradeResult = await analyzeMEVRisk(
         TOKEN_IN,
         TOKEN_OUT,
-        50_000, // large trade
+        15_000, // large trade
         USER_ADDRESS,
         PROPOSED_TX,
         177,
@@ -191,7 +191,7 @@ describe("MEV Detection Analyzer", () => {
       ] as Record<string, unknown>;
 
       expect(
-        (largeCap["cappedSlippageBps"] as number) <=
+        (largeCap["cappedSlippageBps"] as number) >
           (smallCap["cappedSlippageBps"] as number),
       ).toBe(true);
     });

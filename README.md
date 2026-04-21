@@ -14,7 +14,7 @@ Guardian Protocol is a pre-execution security middleware for autonomous AI agent
 | **Token Risk** | Dual-oracle GoPlus assessment — honeypot, tax, blacklist, mint, ownership |
 | **TX Simulation** | eth_call with dual-RPC cross-validation — revert detection, slippage |
 | **MEV Detection** | Dynamic slippage capping based on trade size and volatility heuristics |
-| **AMM Pool Health** | Concentrated liquidity tick scanning — thin liquidity, tick gaps, price deviation |
+| **AMM Pool Health** | Multi-Protocol Discovery (Institutional Whitelist, DODO V2, Order-book, Uniswap V3) — thin liquidity, reserves, spreads, tick gaps |
 
 **The fail-closed model is the differentiator.** If any analyzer cannot complete — API timeout, RPC failure, unknown contract — the verdict is **BLOCK**. Guardian does not warn. It blocks.
 
@@ -148,7 +148,7 @@ Guardian defines **30 discrete risk flag codes** across 5 categories:
 | Token Risk | `HONEYPOT_DETECTED`, `MINT_FUNCTION_PRESENT`, `HIGH_TAX_TOKEN`, `BLACKLIST_FUNCTION`, `OWNERSHIP_NOT_RENOUNCED`, `PROXY_CONTRACT_UPGRADEABLE`, `UNVERIFIED_CONTRACT`, `LOW_HOLDER_COUNT`, `API_UNAVAILABLE`, `TOKEN_NOT_FOUND`, `ANALYZER_ERROR`, `ROUTE_UNAVAILABLE` |
 | Liquidity | `LOW_LIQUIDITY_DEPTH`, `SINGLE_POOL_DEPENDENCY`, `LIQUIDITY_LOCKED_EXPIRED`, `HIGH_PRICE_IMPACT` |
 | TX/MEV | `TX_SIMULATION_REVERTED`, `SANDWICH_ATTACK_LIKELY`, `FRONTRUN_RISK_HIGH`, `UNEXPECTED_STATE_CHANGE`, `GAS_ESTIMATION_FAILED`, `FUZZING_INVARIANT_VIOLATION` |
-| AMM Pool | `AMM_THIN_LIQUIDITY`, `AMM_TICK_GAP_MANIPULATION`, `AMM_PRICE_DEVIATION`, `AMM_ONESIDED_LIQUIDITY`, `AMM_READ_FAILED` |
+| AMM Pool | `AMM_THIN_LIQUIDITY`, `AMM_LOW_RESERVE_RISK`, `AMM_HIGH_SPREAD_MANIPULATION`, `AMM_UNSUPPORTED_PROTOCOL_OR_NO_LIQUIDITY`, `AMM_TICK_GAP_MANIPULATION`, `AMM_PRICE_DEVIATION`, `AMM_ONESIDED_LIQUIDITY`, `AMM_READ_FAILED` |
 | Wallet/MEV | `PRIVATE_MEV_FLOW_HIGH`, `EXCESSIVE_TOKEN_APPROVALS`, `APPROVAL_TO_KNOWN_PHISHER`, `WALLET_RECENTLY_DRAINED` |
 
 Each flag includes a severity tier (`critical`/`high`/`medium`/`low`/`info`) and a natural language explanation for AI agent reasoning.
